@@ -1,5 +1,5 @@
-#ifndef CCT_UTILITY_H_
-#define CCT_UTILITY_H_
+#ifndef FOUNDRY_H_
+#define FOUNDRY_H_
 
 #include <foundry/compile_time.hpp>
 #include <foundry/integral.hpp>

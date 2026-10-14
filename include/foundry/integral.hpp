@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <cmath>
 
-#include <string_view>
-
 #include <array>
 
 #include <type_traits>
@@ -18,6 +16,8 @@
 
 #include <limits>
 #include <bit>
+
+#include <foundry/compile_time.hpp>
 
 namespace Foundry {
     template<std::size_t Size, bool Unsigned = false>

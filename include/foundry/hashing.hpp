@@ -1,20 +1,14 @@
 #ifndef FOUNDRY_HASHING_H_
 #define FOUNDRY_HASHING_H_
 
-#include <cstddef>
 #include <cstdint>
-#include <bit>
+
+#include <span>
 
 #include <string_view>
 
-#include <array>
-
 #include <type_traits>
 #include <concepts>
-
-#include <algorithm>
-#include <utility>
-#include <limits>
 
 #include <foundry/integral.hpp>
 

@@ -35,21 +35,15 @@ namespace Foundry {
     template<typename T>
     concept perfect_hash_key_strategy = std::derived_from<T, PerfectHashKeyStrategy>;
 
-    template<typename Key, typename T, typename KeyOf, std::size_t DeclaredSize>
+    template<typename Key, typename T, typename KeyOf, std::size_t TableSize>
         requires(perfect_hash_key_strategy<KeyOf>)
     class PerfectHasher {
     private:
-        inline static consteval std::size_t compute_table_size() noexcept {
-            std::size_t s = 1;
-            while (s < DeclaredSize * 2) s <<= 1;
-            return s;
-        }
-        inline static constexpr std::size_t TableSize = compute_table_size();
-        inline static constexpr std::size_t BucketCount = DeclaredSize == 0 ? 1 : DeclaredSize;
+        inline static constexpr std::size_t BucketCount = TableSize == 0 ? 1 : TableSize;
 
         class Bucket {
         public:
-            std::array<std::size_t, DeclaredSize> members{};
+            std::array<std::size_t, TableSize> members{};
             std::size_t count = 0;
         };
 
@@ -58,7 +52,7 @@ namespace Foundry {
             std::array<std::size_t, TableSize> _table{};
             std::array<std::size_t, BucketCount> _displacements{};
 
-            inline static constexpr bool checkForDuplicates(const std::array<T, DeclaredSize>& entries) noexcept {
+            inline static constexpr bool checkForDuplicates(const std::array<T, TableSize>& entries) noexcept {
                 for (std::size_t i = 0; i < entries.size(); ++i) {
                     for (std::size_t j = i + 1; j < entries.size(); ++j) {
                         if (KeyOf::get(entries[i]) == KeyOf::get(entries[j]))
@@ -68,10 +62,9 @@ namespace Foundry {
                 return false;
             }
 
-            inline constexpr BuiltAggregate(const std::array<T, DeclaredSize>& entries) {
-                if (checkForDuplicates(entries)) {
+            inline constexpr BuiltAggregate(const std::array<T, TableSize>& entries) {
+                if (checkForDuplicates(entries))
                     throw std::logic_error("A perfect hash type cannot have duplicate keys!");
-                }
 
                 std::array<Bucket, BucketCount> buckets = {};
 
@@ -89,7 +82,7 @@ namespace Foundry {
                 });
 
                 std::array<bool, TableSize> occupied{};
-                _table.fill(DeclaredSize);
+                _table.fill(TableSize);
 
                 for (std::size_t i = 0; i < BucketCount; ++i) {
                     const std::size_t bucket_index = order[i];
@@ -97,7 +90,7 @@ namespace Foundry {
 
                     std::size_t displacement = 0;
                     while (true) {
-                        std::array<std::size_t, DeclaredSize> slots{};
+                        std::array<std::size_t, TableSize> slots{};
                         bool valid = true;
 
                         for (std::size_t j = 0; j < bucket.count; ++j) {
@@ -141,16 +134,16 @@ namespace Foundry {
             }
         };
     public:
-        const std::array<T, DeclaredSize> _entries;
+        const std::array<T, TableSize> _entries;
         const std::array<std::size_t, TableSize> _table{};
         const std::array<std::size_t, BucketCount> _displacements{};
     private:
-        inline constexpr PerfectHasher(std::array<T, DeclaredSize> entries, BuiltAggregate&& aggregate) : _entries(entries), _table(std::move(aggregate._table)), _displacements(std::move(aggregate._displacements)) {}
+        inline constexpr PerfectHasher(std::array<T, TableSize> entries, BuiltAggregate&& aggregate) : _entries(entries), _table(std::move(aggregate._table)), _displacements(std::move(aggregate._displacements)) {}
     protected:
-        inline static constexpr std::uint64_t TopLevelSeed = MixedTypeIdentifierRandom<PerfectHasher>::get() ^ mix_bits(DeclaredSize);
-        inline static constexpr std::uint64_t SecondarySeed = MixedTypeIdentifierRandom<PerfectHasher>::get() ^ mix_bits(DeclaredSize ^ MixedTypeIdentifierRandom<PerfectHasher>::get());
+        inline static constexpr std::uint64_t TopLevelSeed = MixedTypeIdentifierRandom<PerfectHasher>::get() ^ mix_bits(TableSize);
+        inline static constexpr std::uint64_t SecondarySeed = MixedTypeIdentifierRandom<PerfectHasher>::get() ^ mix_bits(TableSize ^ MixedTypeIdentifierRandom<PerfectHasher>::get());
 
-        inline constexpr PerfectHasher(std::array<T, DeclaredSize> entries) noexcept : PerfectHasher(entries, BuiltAggregate(entries)) {}
+        inline constexpr PerfectHasher(std::array<T, TableSize> entries) noexcept : PerfectHasher(entries, BuiltAggregate(entries)) {}
 
         inline constexpr std::optional<T> getData(Key key) const noexcept {
             const std::size_t bucket = FNV1A::hash(key, TopLevelSeed) % BucketCount;
@@ -161,7 +154,7 @@ namespace Foundry {
 
             const std::size_t entry_index = _table[slot];
 
-            if (entry_index == DeclaredSize)
+            if (entry_index == TableSize)
                 return std::nullopt;
 
             if (KeyOf::get(_entries[entry_index]) != key)
@@ -171,16 +164,16 @@ namespace Foundry {
         }
     public:
         inline constexpr std::size_t size() const noexcept {
-            return DeclaredSize;
+            return TableSize;
         }
     };
 
-    template<typename Key, typename Value, std::size_t DeclaredSize>
-    class PerfectHashMap : public PerfectHasher<Key, std::pair<Key, Value>, PairFirstKeyStrategy, DeclaredSize> {
+    template<typename Key, typename Value, std::size_t TableSize>
+    class PerfectHashMap : public PerfectHasher<Key, std::pair<Key, Value>, PairFirstKeyStrategy, TableSize> {
     private:
-        using SuperType = PerfectHasher<Key, std::pair<Key, Value>, PairFirstKeyStrategy, DeclaredSize>;
+        using SuperType = PerfectHasher<Key, std::pair<Key, Value>, PairFirstKeyStrategy, TableSize>;
     public:
-        inline constexpr PerfectHashMap(std::array<std::pair<Key, Value>, DeclaredSize> entries) noexcept : SuperType(entries) {}
+        inline constexpr PerfectHashMap(std::array<std::pair<Key, Value>, TableSize> entries) noexcept : SuperType(entries) {}
 
         inline constexpr std::optional<Value> get(Key key) const noexcept {
             auto data = SuperType::getData(key);
@@ -208,12 +201,12 @@ namespace Foundry {
         });
     }
 
-    template<typename Key, std::size_t DeclaredSize>
-    class PerfectHashSet : public PerfectHasher<Key, Key, IdentityKeyStrategy, DeclaredSize> {
+    template<typename Key, std::size_t TableSize>
+    class PerfectHashSet : public PerfectHasher<Key, Key, IdentityKeyStrategy, TableSize> {
     private:
-        using SuperType = PerfectHasher<Key, Key, IdentityKeyStrategy, DeclaredSize>;
+        using SuperType = PerfectHasher<Key, Key, IdentityKeyStrategy, TableSize>;
     public:
-        inline constexpr PerfectHashSet(std::array<Key, DeclaredSize> entries) noexcept : SuperType(entries) {}
+        inline constexpr PerfectHashSet(std::array<Key, TableSize> entries) noexcept : SuperType(entries) {}
 
         inline constexpr bool contains(Key key) const noexcept {
             auto data = SuperType::getData(key);

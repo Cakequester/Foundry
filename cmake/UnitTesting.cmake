@@ -49,6 +49,8 @@ function(add_cct_unittest name)
             ${TEST_LINK_LIBS}
     )
 
-    include(GoogleTest)
-    gtest_discover_tests(${name})
+    gtest_discover_tests(${name}
+        CONFIGURATION "$<CONFIG>"
+        DISCOVERY_MODE PRE_TEST
+    )
 endfunction()
