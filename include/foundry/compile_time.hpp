@@ -13,6 +13,7 @@
 #include <concepts>
 
 #include <memory>
+#include <algorithm>
 #include <utility>
 
 #include <source_location>
@@ -75,34 +76,58 @@ namespace Foundry {
     template<typename T>
     using matching_integral_t = matching_integral<T>::type;
 
+    namespace detail {
+        template<auto Value>
+        struct are_values_equal_helper {};
+    }
+
+    template<auto A, auto B>
+    inline constexpr bool are_values_equal() noexcept {
+        return std::same_as<detail::are_values_equal_helper<A>, detail::are_values_equal_helper<B>>;
+    }
+
+    // TODO: Make first-class type with full suite of features. This is long overdue.
     template<std::size_t N>
-    struct FixedString {
-        char chars[N]{};
+    class FixedString {
+    public:
+        std::array<char, N> _chars{};
+
+        inline constexpr FixedString() noexcept {}
 
         inline constexpr FixedString(const char(&str)[N]) noexcept {
-            for (std::size_t i = 0; i < N; ++i) chars[i] = str[i];
+            for (std::size_t i = 0; i < N; ++i) _chars[i] = str[i];
         }
 
-        inline constexpr explicit FixedString(const char* str) noexcept {
-            for (std::size_t i = 0; i < N; ++i) chars[i] = str[i];
+        template<std::size_t M>
+        inline constexpr bool operator==(const FixedString<M>& other) const noexcept {
+            if constexpr (N != M) return false;
+            else return std::equal(_chars.begin(), _chars.end(), other._chars.begin());
         }
 
         inline constexpr std::string_view view() const noexcept {
-            return std::string_view(chars, N - 1);
+            return std::string_view(_chars);
         }
 
-        constexpr std::size_t size() const {
+        inline constexpr std::size_t size() const noexcept {
             return N - 1;
         }
     };
 
+    // TODO: Replace these two functions.
+    template<std::size_t N>
+    inline constexpr FixedString<N> makeFixedStringFromPointer(const char *str) {
+        FixedString<N> result{};
+        for (std::size_t i = 0; i < N; ++i) result._chars[i] = str[i];
+        return result;
+    }
+
     template<FixedString S, FixedString Prefix>
-    consteval bool string_starts_with() noexcept {
+    inline constexpr bool string_starts_with() noexcept {
         if constexpr (Prefix.size() > S.size())
             return false;
 
         for (std::size_t i = 0; i < Prefix.size(); ++i)
-            if (S.chars[i] != Prefix.chars[i])
+            if (S._chars[i] != Prefix._chars[i])
                 return false;
 
         return true;
@@ -138,6 +163,8 @@ namespace Foundry {
             return invoke(std::forward<Args>(args)...);
         }
     };
+
+    // TODO: Remember to add a backport of std::constant_wrapper!
 
     class EmptyFieldType {};
 
@@ -227,144 +254,6 @@ namespace Foundry {
     };
 
     namespace detail {
-        template<std::size_t Index, typename Current, typename... Rest>
-        inline constexpr auto getTypeAtImplementation() noexcept {
-            if constexpr (Index == 0) return std::type_identity<Current>{};
-            else return getTypeAtImplementation<Index - 1, Rest...>();
-        }
-    }
-
-    template<std::size_t Index, typename... Ts>
-    inline constexpr auto getTypeAt() noexcept {
-        static_assert(Index < sizeof...(Ts), "Index is out of bounds.");
-        return detail::getTypeAtImplementation<Index, Ts...>();
-    }
-
-    template<typename T, typename... Ts>
-    inline constexpr bool containsType() noexcept {
-        return (std::same_as<T, Ts> || ...);
-    }
-
-    template<typename T, typename... Ts>
-    inline constexpr std::optional<std::size_t> indexOfType() noexcept {
-        std::size_t i = 0;
-        std::optional<std::size_t> result;
-        (((std::same_as<T, Ts> && !result) ? (result = i, true) : (++i, false)) || ...);
-        return result;
-    }
-
-    template<typename... Ts>
-    class TypeList {
-        template<typename...>
-        friend class TypeList;
-
-        template<typename... Others>
-        using combine_rebind = TypeList<Others..., Ts...>;
-    private:
-        template<typename Current, typename... Rest>
-        inline static constexpr auto reverseImplementation() noexcept {
-            if constexpr (sizeof...(Rest) == 0) return TypeList<Current>{};
-            else {
-                auto reversed_rest = reverseImplementation<Rest...>();
-                return reversed_rest.template appendRange<Current>();
-            }
-        }
-
-        template<std::size_t Start, std::size_t End, std::size_t Index, typename Current, typename... Rest>
-        inline static constexpr auto sublistImplementation() noexcept {
-            constexpr std::size_t position = sizeof...(Ts) - Index;
-            constexpr bool in_range = position >= Start && position < End;
-
-            if constexpr (sizeof...(Rest) == 0) {
-                if constexpr (in_range) return TypeList<Current>{};
-                else return TypeList<>{};
-            } else {
-                auto rest = sublistImplementation<Start, End, Index - 1, Rest...>();
-                if constexpr (in_range) return rest.template appendRange<Current>();
-                else return rest;
-            }
-        }
-    public:
-        template<std::size_t Index>
-        using at = typename decltype(getTypeAt<Index, Ts...>())::type;
-
-        template<typename T>
-        inline static constexpr bool contains() noexcept {
-            return containsType<T, Ts...>();
-        }
-
-        template<typename T>
-        inline static constexpr std::optional<std::size_t> indexOf() noexcept {
-            return indexOfType<T, Ts...>();
-        }
-
-        inline static constexpr auto reverse() noexcept {
-            if constexpr (sizeof...(Ts) < 1) return TypeList<>{};
-            else return reverseImplementation<Ts...>();
-        }
-
-        template<std::size_t Start, std::size_t End>
-        inline static constexpr auto sublist() noexcept {
-            static_assert(Start <= End && End <= sizeof...(Ts), "Invalid range.");
-            if constexpr (Start == End) return TypeList<>{};
-            else return sublistImplementation<Start, End, sizeof...(Ts), Ts...>().reverse();
-        }
-
-        template<std::size_t End>
-        inline static constexpr auto sublist() noexcept {
-            return sublist<0, End>();
-        }
-
-        template<typename T>
-        inline static constexpr auto pushFront() noexcept {
-            return TypeList<T, Ts...>{};
-        }
-
-        template<typename Other>
-            requires(instance_of<TypeList, Other>())
-        inline static constexpr auto append() noexcept {
-            return typename Other::template combine_rebind<Ts...>{};
-        }
-
-        template<typename Other>
-        inline static constexpr auto append() noexcept {
-            return TypeList<Ts..., Other>{};
-        }
-
-        template<typename... Others>
-        inline static constexpr auto appendRange() noexcept {
-            return TypeList<Ts..., Others...>{};
-        }
-
-        template<typename T>
-        inline static constexpr auto remove() noexcept {
-            constexpr std::optional<std::size_t> index_of = indexOf<T>();
-
-            if constexpr (!index_of) return TypeList<Ts...>{};
-            else {
-                constexpr std::size_t index = *index_of;
-                using tail = decltype(sublist<index + 1, sizeof...(Ts)>());
-                return sublist<0, index>().template append<tail>();
-            }
-        }
-
-        inline static constexpr std::size_t size() noexcept {
-            return sizeof...(Ts);
-        }
-
-        inline static constexpr bool empty() noexcept {
-            return size() == 0;
-        }
-    };
-
-    template <std::size_t Index, auto First, auto... Rest>
-    inline static constexpr auto getValueAt() noexcept {
-        if constexpr (Index == 0) return First;
-        else return getValueAt<Index - 1, Rest...>();
-    }
-
-
-    namespace detail {
         template<typename U>
         static consteval const char* typeIdRawName() noexcept {
             return std::source_location::current().function_name();
@@ -374,27 +263,8 @@ namespace Foundry {
     template<typename U>
     static consteval auto typeId() noexcept {
         constexpr const char* name = detail::typeIdRawName<U>();
-        return FixedString<std::char_traits<char>::length(name) + 1>(name);
+        return makeFixedStringFromPointer<std::char_traits<char>::length(name) + 1>(name);
     }
-
-    template<auto... Values>
-    class ValueList {
-    public:
-        template<std::size_t Index>
-        inline static constexpr decltype(auto) at() noexcept {
-            static_assert(Index < sizeof...(Values), "Index out of bounds");
-            return get_value<Index, Values...>();
-        }
-    };
-
-    template<typename T>
-    struct is_value_list : std::false_type {};
-
-    template<template<auto...> class ListType, auto... Values>
-    struct is_value_list<ListType<Values...>> : std::true_type {};
-
-    template<typename T>
-    inline constexpr bool is_value_list_v = is_value_list<T>::value;
 };
 
 #endif

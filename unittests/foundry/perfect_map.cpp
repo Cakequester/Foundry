@@ -11,11 +11,11 @@ namespace map {
 	constexpr auto map = Foundry::makePerfectHashMap<int, int>(std::pair{ 314, 523 }, std::pair{ testing_key, testing_value }, std::pair{ 56723, 90993 });
 }
 
-TEST(CompileMapTest, ContainsKey) {
+TEST(CompileMap, ContainsKey) {
 	EXPECT_TRUE(map::map.contains(map::testing_key));
 }
 
-TEST(CompileMapTest, ContainsValue) {
+TEST(CompileMap, ContainsValue) {
 	EXPECT_EQ(map::map.at(map::testing_key), map::testing_value);
 
 	auto value = map::map.get(map::testing_key);
@@ -24,6 +24,6 @@ TEST(CompileMapTest, ContainsValue) {
 	EXPECT_EQ(value.value(), map::testing_value);
 }
 
-TEST(CompileMapTest, Size) {
+TEST(CompileMap, Size) {
 	EXPECT_EQ(map::map.size(), map::size);
 }

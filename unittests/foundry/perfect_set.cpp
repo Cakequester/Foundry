@@ -10,10 +10,10 @@ namespace set {
 	constexpr auto set = Foundry::makePerfectHashSet<int>(314, testing_key, 56723);
 }
 
-TEST(CompileSetTest, Contains) {
+TEST(CompileSet, Contains) {
 	EXPECT_TRUE(set::set.contains(set::testing_key));
 }
 
-TEST(CompileSetTest, Size) {
+TEST(CompileSet, Size) {
 	EXPECT_EQ(set::set.size(), set::size);
 }

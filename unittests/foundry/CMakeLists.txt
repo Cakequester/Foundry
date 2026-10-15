@@ -18,3 +18,17 @@ add_cct_unittest(integral
     INCLUDE
         ${CCT_INCLUDE_PATH}
 )
+
+add_cct_unittest(type_list
+    SOURCES
+        type_list.cpp
+    INCLUDE
+        ${CCT_INCLUDE_PATH}
+)
+
+add_cct_unittest(value_list
+    SOURCES
+        value_list.cpp
+    INCLUDE
+        ${CCT_INCLUDE_PATH}
+)
