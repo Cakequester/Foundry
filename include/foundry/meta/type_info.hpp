@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <string_view>
+
 #include <type_traits>
 #include <concepts>
 
@@ -40,61 +42,48 @@ namespace Foundry::Meta {
 
     template<typename T, template<typename...> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper<U, T>::value;
+        return detail::instance_of_helper<U, std::remove_cvref_t<T>>::value;
     }
 
     template<typename T, template<auto...> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_2<U, T>::value;
+        return detail::instance_of_helper_2<U, std::remove_cvref_t<T>>::value;
     }
 
     template<typename T, template<typename, auto> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_3<U, T>::value;
+        return detail::instance_of_helper_3<U, std::remove_cvref_t<T>>::value;
     }
 
     template<typename T, template<auto, typename> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_4<U, T>::value;
+        return detail::instance_of_helper_4<U, std::remove_cvref_t<T>>::value;
     }
 
     template<auto Value, template<typename...> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper<U, decltype(Value)>::value;
+        return detail::instance_of_helper<U, std::remove_cvref_t<decltype(Value)>>::value;
     }
 
     template<auto Value, template<auto...> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_2<U, decltype(Value)>::value;
+        return detail::instance_of_helper_2<U, std::remove_cvref_t<decltype(Value)>>::value;
     }
 
     template<auto Value, template<typename, auto> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_3<U, decltype(Value)>::value;
+        return detail::instance_of_helper_3<U, std::remove_cvref_t<decltype(Value)>>::value;
     }
 
     template<auto Value, template<auto, typename> class U>
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_4<U, decltype(Value)>::value;
+        return detail::instance_of_helper_4<U, std::remove_cvref_t<decltype(Value)>>::value;
     }
 
     template<typename Derived, template<typename...> class Base, typename... Args>
     concept derived_from_instance = requires(Derived * p) {
         [] <typename... Args>(Base<Args...>*) {}(p);
     };
-
-    namespace detail {
-        template<typename U>
-        static consteval const char* typeIdRawName() noexcept {
-            return std::source_location::current().function_name();
-        }
-    }
-
-    template<typename U>
-    static consteval auto typeId() noexcept {
-        constexpr const char* name = detail::typeIdRawName<U>();
-        return makeFixedStringFromPointer<std::char_traits<char>::length(name) + 1>(name);
-    }
 }
 
 #include <foundry/template_lists.hpp>
@@ -129,45 +118,87 @@ namespace Foundry::Meta {
     template<typename T, template<typename...> class U, typename... Args>
         requires (sizeof...(Args) > 0)
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper<U, T, Args...>::value;
+        return detail::specialized_instance_of_helper<U, std::remove_cvref_t<T>, Args...>::value;
     }
 
     template<typename T, template<auto...> class U, auto... Args>
         requires (sizeof...(Args) > 0)
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_2<U, T, Args...>::value;
+        return detail::specialized_instance_of_helper_2<U, std::remove_cvref_t<T>, Args...>::value;
     }
 
     template<typename T, template<typename, auto> class U, typename One, auto Two>
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_3<U, T, One, Two>::value;
+        return detail::specialized_instance_of_helper_3<U, std::remove_cvref_t<T>, One, Two>::value;
     }
 
     template<typename T, template<auto, typename> class U, auto One, typename Two>
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_4<U, T, One, Two>::value;
+        return detail::specialized_instance_of_helper_4<U, std::remove_cvref_t<T>, One, Two>::value;
     }
 
     template<auto Value, template<typename...> class U, typename... Args>
         requires (sizeof...(Args) > 0)
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper<U, decltype(Value), Args...>::value;
+        return detail::specialized_instance_of_helper<U, std::remove_cvref_t<decltype(Value)>, Args...>::value;
     }
 
     template<auto Value, template<auto...> class U, auto... Args>
         requires (sizeof...(Args) > 0)
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_2<U, decltype(Value), Args...>::value;
+        return detail::specialized_instance_of_helper_2<U, std::remove_cvref_t<decltype(Value)>, Args...>::value;
     }
 
     template<auto Value, template<typename, auto> class U, typename One, auto Two>
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_3<U, decltype(Value), One, Two>::value;
+        return detail::specialized_instance_of_helper_3<U, std::remove_cvref_t<decltype(Value)>, One, Two>::value;
     }
 
     template<auto Value, template<auto, typename> class U, auto One, typename Two>
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_4<U, decltype(Value), One, Two>::value;
+        return detail::specialized_instance_of_helper_4<U, std::remove_cvref_t<decltype(Value)>, One, Two>::value;
+    }
+}
+
+#include <foundry/integral.hpp>
+
+namespace Foundry::Meta {
+    namespace detail {
+        template<typename T>
+        inline constexpr std::string_view getConcealedTypeName() noexcept {
+            return std::source_location::current().function_name();
+        }
+    }
+
+    class TypeIdentifier {
+    private:
+        uint128_t _identifier;
+
+        inline constexpr TypeIdentifier(uint128_t identifier) noexcept : _identifier(identifier) {}
+    public:
+        template<typename T>
+        inline static constexpr TypeIdentifier of() noexcept {
+            static_assert(detail::getConcealedTypeName<double>() == detail::getConcealedTypeName<double>(), "Type identifiers are not supported on your compiler!");
+            static_assert(detail::getConcealedTypeName<int>() != detail::getConcealedTypeName<float>(), "Type identifiers are not supported on your compiler!");
+
+            return TypeIdentifier(Murmur128::hash(detail::getConcealedTypeName<std::remove_cvref_t<T>>()));
+        }
+
+        inline constexpr TypeIdentifier& operator=(const TypeIdentifier& rhs) noexcept {
+            _identifier = rhs._identifier;
+            return *this;
+        }
+
+        inline constexpr bool operator==(const TypeIdentifier& rhs) const noexcept {
+            return _identifier == rhs._identifier;
+        }
+
+        inline constexpr std::strong_ordering operator<=>(const TypeIdentifier& rhs) const noexcept = delete;
+    };
+
+    template<typename T>
+    inline constexpr TypeIdentifier typeId() noexcept {
+        return TypeIdentifier::of<T>();
     }
 }
 
