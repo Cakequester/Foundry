@@ -9,57 +9,57 @@ namespace list {
 	constexpr int size = 5;
 }
 
-TEST(TypeList, At) {
+TEST(ValueList, At) {
 	EXPECT_TRUE((Foundry::are_values_equal<list::list::back(), list::marker>()));
 }
 
-TEST(TypeList, Contains) {
+TEST(ValueList, Contains) {
 	EXPECT_TRUE(list::list::contains<list::marker>());
 }
 
-TEST(TypeList, IndexOf) {
+TEST(ValueList, IndexOf) {
 	EXPECT_EQ(list::list::indexOf<list::marker>(), list::list::size() - 1);
 }
 
-TEST(TypeList, Reverse) {
+TEST(ValueList, Reverse) {
 	using reversed = decltype(list::list::reverse());
 	EXPECT_TRUE((Foundry::are_values_equal<reversed::front(), list::marker>()));
 }
 
-TEST(TypeList, Sublist) {
+TEST(ValueList, Sublist) {
 	using sublist = decltype(list::list::sublist<list::list::size() - 1, list::list::size()>());
 	EXPECT_TRUE((Foundry::are_values_equal<sublist::front(), list::marker>()));
 }
 
-TEST(TypeList, PushFront) {
+TEST(ValueList, PushFront) {
 	using pushed = decltype(list::list::pushFront<list::marker>());
 	EXPECT_TRUE((Foundry::are_values_equal<pushed::front(), list::marker>()));
 }
 
-TEST(TypeList, Append) {
+TEST(ValueList, Append) {
 	using appended = decltype(list::list::append<list::marker>());
 	EXPECT_TRUE((Foundry::are_values_equal<appended::back(), list::marker>()));
 }
 
-TEST(TypeList, AppendOther) {
+TEST(ValueList, AppendOther) {
 	using appended = decltype(list::list::appendList<Foundry::ValueList<list::marker, list::marker>>());
 	EXPECT_TRUE((Foundry::are_values_equal<appended::back(), list::marker>()));
 }
 
-TEST(TypeList, AppendRange) {
-	using appended = decltype(list::list::appendRange<list::marker, list::marker>());
+TEST(ValueList, AppendRange) {
+	using appended = decltype(list::list::append<list::marker, list::marker>());
 	EXPECT_TRUE((Foundry::are_values_equal<appended::back(), list::marker>()));
 }
 
-TEST(TypeList, Remove) {
+TEST(ValueList, Remove) {
 	using removed = decltype(list::list::remove<list::marker>());
 	EXPECT_FALSE(removed::contains<list::marker>());
 }
 
-TEST(TypeList, Size) {
+TEST(ValueList, Size) {
 	EXPECT_EQ(list::list::size(), list::size);
 }
 
-TEST(TypeList, Empty) {
+TEST(ValueList, Empty) {
 	EXPECT_FALSE(list::list::empty());
 }

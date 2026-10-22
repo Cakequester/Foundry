@@ -1,4 +1,4 @@
-macro(initialize_cct_unittesting)
+macro(initialize_unittesting)
     include(FetchContent)
 
     FetchContent_Declare(
@@ -12,15 +12,15 @@ macro(initialize_cct_unittesting)
 
     include(GoogleTest)
 
-    add_library(cct_unittest INTERFACE)
+    add_library(unittest INTERFACE)
 
-    target_link_libraries(cct_unittest
+    target_link_libraries(unittest
         INTERFACE
             GTest::gtest_main
     )
 endmacro()
 
-function(add_cct_unittest name)
+function(add_unittest name)
     cmake_parse_arguments(
         TEST
         ""
@@ -45,7 +45,7 @@ function(add_cct_unittest name)
 
     target_link_libraries(${name}
         PRIVATE
-            cct_unittest
+            unittest
             ${TEST_LINK_LIBS}
     )
 

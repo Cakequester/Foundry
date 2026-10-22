@@ -1,5 +1,5 @@
 include(UnitTesting)
 
-initialize_cct_unittesting()
+initialize_unittesting()
 
 add_subdirectory(foundry)

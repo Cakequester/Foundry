@@ -100,7 +100,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline constexpr void assign(const T& value) noexcept {
             _data.fill(isNegative(value) ? 0xFF : 0x00);
             for (std::size_t i = 0; i < std::min(sizeof(value), SizeInBytes); ++i)
@@ -119,11 +119,50 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline static constexpr bool isNegative(const T& v) noexcept {
             if constexpr (T::IsUnsigned) return false;
             else return (v._data[getMSB<T>()] & 0x80) != 0;
         }
+
+        inline static constexpr std::size_t byteIndex(std::size_t i) noexcept {
+            if constexpr (std::endian::native == std::endian::little)
+                return i;
+            else
+                return SizeInBytes - 1 - i;
+        }
+
+        template<std::integral T>
+        inline static constexpr bool isUnsignedType() noexcept {
+            return std::is_unsigned_v<T>;
+        }
+
+        template<typename T>
+            requires(Meta::instance_of<T, Foundry::BitInt>())
+        inline static constexpr bool isUnsignedType() noexcept {
+            return T::IsUnsigned;
+        }
+
+        template<typename T, typename U>
+        inline static constexpr auto promoteIntegral() noexcept {
+            constexpr std::size_t UniformSize = std::max(sizeof(T), sizeof(U));
+
+            using UniformType = BitInt<UniformSize * 8, isUnsignedType<T>() || isUnsignedType<U>()>;
+
+            if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint8_t>::digits>())
+                return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint8_t>, std::type_identity<std::int8_t>>{};
+            else if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint16_t>::digits>())
+                return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint16_t>, std::type_identity<std::int16_t>>{};
+            else if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint32_t>::digits>())
+                return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint32_t>, std::type_identity<std::int32_t>>{};
+            else if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint64_t>::digits>())
+                return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint64_t>, std::type_identity<std::int64_t>>{};
+            else
+                return std::type_identity<UniformType>{};
+        }
+
+        template<typename T, typename U>
+        using promoted_integral = typename decltype(promoteIntegral<T, U>())::type;
     public:
         inline static constexpr bool IsUnsigned = Unsigned;
 
@@ -140,7 +179,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline constexpr BitInt(T value) noexcept {
             assign(value);
         }
@@ -153,7 +192,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline constexpr BitInt& operator=(T rhs) noexcept {
             assign(rhs);
             return *this;
@@ -219,7 +258,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline constexpr bool operator==(const T& rhs) const noexcept {
             const bool lhs_negative = !Unsigned && isNegative();
             const bool rhs_negative = !T::IsUnsigned && isNegative(rhs);
@@ -245,7 +284,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline constexpr std::strong_ordering operator<=>(const T& rhs) const noexcept {
             const bool lhs_negative = !Unsigned && isNegative();
             const bool rhs_negative = !T::IsUnsigned && isNegative(rhs);
@@ -277,6 +316,137 @@ namespace Foundry {
                     new_rhs._data.begin(), new_rhs._data.end());
         }
 
+        // BIT SHIFT
+
+        inline constexpr BitInt& operator<<=(int shift) {
+            if (shift < 0) throw std::invalid_argument("Negative shift");
+
+            if (shift >= Size) {
+                _data.fill(0);
+                return *this;
+            }
+
+            const auto src = _data;
+            const std::size_t byte_shift = shift / 8;
+            const unsigned bit_shift = static_cast<unsigned>(shift % 8);
+
+            for (std::size_t i = SizeInBytes; i-- > 0;) {
+                std::uint16_t value = 0;
+
+                if (i >= byte_shift) {
+                    value = static_cast<std::uint16_t>(src[byteIndex(i - byte_shift)]) << bit_shift;
+
+                    if (bit_shift != 0 && i > byte_shift)
+                        value |= static_cast<std::uint16_t>(src[byteIndex(i - byte_shift - 1)]) >> (8 - bit_shift);
+                }
+
+                _data[byteIndex(i)] = static_cast<std::uint8_t>(value);
+            }
+
+            normalize();
+            return *this;
+        }
+
+        inline constexpr BitInt& operator>>=(int shift) {
+            if (shift < 0) throw std::invalid_argument("Negative shift");
+
+            const bool negative = isNegative();
+
+            if (static_cast<std::size_t>(shift) >= Size) {
+                _data.fill(negative ? 0xFF : 0x00);
+                normalize();
+                return *this;
+            }
+
+            const auto src = _data;
+            const std::size_t byte_shift = static_cast<std::size_t>(shift) / 8;
+            const unsigned bit_shift = static_cast<unsigned>(shift % 8);
+            const std::uint8_t fill = negative ? 0xFF : 0x00;
+
+            for (std::size_t i = 0; i < SizeInBytes; ++i) {
+                const std::size_t source = i + byte_shift;
+                std::uint16_t value = 0;
+
+                if (source < SizeInBytes) {
+                    value = src[byteIndex(source)];
+
+                    if (bit_shift != 0) {
+                        const std::uint8_t upper = source + 1 < SizeInBytes
+                            ? src[byteIndex(source + 1)]
+                            : fill;
+
+                        value >>= bit_shift;
+                        value |= static_cast<std::uint16_t>(upper) << (8 - bit_shift);
+                    }
+                }
+                else {
+                    value = fill;
+                }
+
+                _data[byteIndex(i)] = static_cast<std::uint8_t>(value);
+            }
+
+            normalize();
+            return *this;
+        }
+
+        inline constexpr BitInt operator<<(int shift) const {
+            BitInt result(*this);
+            result <<= shift;
+            return result;
+        }
+
+        inline constexpr BitInt operator>>(int shift) const {
+            BitInt result(*this);
+            result >>= shift;
+            return result;
+        }
+
+        template<typename T>
+            requires(Meta::instance_of<T, Foundry::BitInt>())
+        inline constexpr BitInt& operator|=(const T& rhs) noexcept {
+            const std::uint8_t extension_byte = (!T::IsUnsigned && isNegative(rhs)) ? 0xFF : 0x00;
+
+            for (std::size_t i = 0; i < SizeInBytes; ++i) {
+                std::uint8_t const rhs_byte = (i < sizeof(rhs)) ? rhs._data[i] : extension_byte;
+
+                this->_data[i] |= rhs_byte;
+            }
+
+            return *this;
+        }
+
+        template<std::integral T>
+        inline constexpr BitInt& operator|=(T rhs) noexcept {
+            *this |= BitInt<sizeof(rhs) * 8, std::is_unsigned_v<T>>(rhs);
+            return *this;
+        }
+
+        template<std::integral T>
+        inline constexpr promoted_integral<T, BitInt> operator|(T rhs) const noexcept {
+            constexpr std::size_t UniformSize = std::max(SizeInBytes, sizeof(rhs));
+
+            BitInt<UniformSize * 8, Unsigned> lhs(*this);
+            BitInt<UniformSize * 8, std::is_unsigned_v<T>> new_rhs(rhs);
+
+            lhs |= new_rhs;
+
+            return lhs;
+        }
+
+        template<typename T>
+            requires(Meta::instance_of<T, Foundry::BitInt>())
+        inline constexpr promoted_integral<T, BitInt> operator|(const T& rhs) const noexcept {
+            constexpr std::size_t UniformSize = std::max(SizeInBytes, sizeof(rhs));
+
+            BitInt<UniformSize * 8, Unsigned> lhs(*this);
+            BitInt<UniformSize * 8, T::IsUnsigned> new_rhs(rhs);
+
+            lhs |= new_rhs;
+
+            return lhs;
+        }
+
         // CASTS
 
         template<std::integral T>
@@ -289,7 +459,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Foundry::BitInt>())
         inline constexpr operator T() const noexcept {
             return T(*this);
         }

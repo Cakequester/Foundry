@@ -79,10 +79,10 @@ namespace Foundry {
     template<typename T>
     class TypeIdentifierRandom {
     private:
-        static_assert(typeId<int>() != typeId<float>(), "Your compiler does not support type identifiers!");
-        static_assert(typeId<float>() == typeId<float>(), "Your compiler does not support type identifiers!");
+        static_assert(Meta::typeId<int>() != Meta::typeId<float>(), "Your compiler does not support type identifiers!");
+        static_assert(Meta::typeId<float>() == Meta::typeId<float>(), "Your compiler does not support type identifiers!");
 
-        inline static constexpr std::uint64_t Hash = FNV1A::hash(typeId<T>().view());
+        inline static constexpr std::uint64_t Hash = FNV1A::hash(Meta::typeId<T>().view());
     public:
         inline static constexpr std::uint64_t get() noexcept {
             return Hash;

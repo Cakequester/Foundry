@@ -47,7 +47,7 @@ TEST(TypeList, AppendOther) {
 }
 
 TEST(TypeList, AppendRange) {
-	using appended = decltype(list::list::appendRange<list::marker_t, list::marker_t>());
+	using appended = decltype(list::list::append<list::marker_t, list::marker_t>());
 	EXPECT_TRUE((std::same_as<decltype(appended::back())::type, list::marker_t>));
 }
 

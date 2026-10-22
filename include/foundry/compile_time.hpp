@@ -21,41 +21,15 @@
 #include <stdexcept>
 
 namespace Foundry {
-    namespace detail {
-        template<template<typename...> class T, typename U>
-        struct is_instance_of_helper : std::false_type {};
-
-        template<template<typename...> class T, typename... Args>
-        struct is_instance_of_helper<T, T<Args...>> : std::true_type {};
-
-        template<template<auto...> class T, typename U>
-        struct is_type_with_NTTPS_instance_of : std::false_type {};
-
-        template<template<auto...> class T, auto... Args>
-        struct is_type_with_NTTPS_instance_of<T, T<Args...>> : std::true_type {};
+    template<typename T>
+    inline constexpr bool template_failure() noexcept {
+        return false;
     }
 
-    template<typename T, template<typename...> class U>
-        requires(detail::is_instance_of_helper<U, T>::value)
-    struct is_instance_of : std::true_type {};
-
-    template<typename T, template<typename...> class U>
-    inline constexpr bool is_instance_of_v = is_instance_of<T, U>::value;
-
-    template<typename T, template<typename...> class U>
-    inline constexpr bool instance_of() noexcept {
-        return is_instance_of_v<T, U>;
+    template<auto A>
+    inline constexpr bool template_failure() noexcept {
+        return false;
     }
-
-    template<typename T, template<auto...> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::is_type_with_NTTPS_instance_of<U, T>::value;
-    }
-
-    template<typename Derived, template<typename...> class Base, typename... Args>
-    concept derived_from_instance = requires(Derived *p) {
-        []<typename... Args>(Base<Args...>*) {}(p);
-    };
 
     template<typename T, typename... Rest>
     struct variadic_front {
@@ -164,18 +138,21 @@ namespace Foundry {
         }
     };
 
-    // TODO: Remember to add a backport of std::constant_wrapper!
+    // TODO: Add a backport of std::constant_wrapper!
 
-    class EmptyFieldType {};
-
-    template<typename T>
+    template<bool Condition, typename T>
     class OptionalField {
     public:
-        inline static constexpr bool IsEmpty = false;
+        inline static constexpr bool IsEmpty = !Condition;
 
         T value;
 
         inline constexpr OptionalField(T value) noexcept : value(std::move(value)) {}
+
+        inline constexpr OptionalField& operator=(T value) noexcept {
+            this->value = value;
+            return *this;
+        }
 
         inline constexpr operator T() noexcept {
             return value;
@@ -186,16 +163,12 @@ namespace Foundry {
         }
     };
 
-    template<>
-    class OptionalField<EmptyFieldType> {
+    template<typename T>
+    class OptionalField<false, T> {
     public:
         inline static constexpr bool IsEmpty = true;
-    };
 
-    template<>
-    class OptionalField<void> {
-    public:
-        inline static constexpr bool IsEmpty = true;
+        inline constexpr OptionalField(auto&&...) noexcept {}
     };
 
     class EmptyCompileOptional {};
@@ -252,19 +225,6 @@ namespace Foundry {
             return _storage != nullptr;
         }
     };
-
-    namespace detail {
-        template<typename U>
-        static consteval const char* typeIdRawName() noexcept {
-            return std::source_location::current().function_name();
-        }
-    }
-
-    template<typename U>
-    static consteval auto typeId() noexcept {
-        constexpr const char* name = detail::typeIdRawName<U>();
-        return makeFixedStringFromPointer<std::char_traits<char>::length(name) + 1>(name);
-    }
 };
 
 #endif

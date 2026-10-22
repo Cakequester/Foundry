@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include <foundry/meta/type_info.hpp>
+
 #include <foundry/hashing.hpp>
 #include <foundry/random.hpp>
 
@@ -22,7 +24,7 @@ namespace Foundry {
     class PairFirstKeyStrategy : public PerfectHashKeyStrategy {
     public:
         template<typename P>
-            requires(instance_of<P, std::pair>())
+            requires(Meta::instance_of<P, std::pair>())
         inline static constexpr auto get(const P& p) noexcept { return p.first; }
     };
 
