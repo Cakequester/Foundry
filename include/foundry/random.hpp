@@ -10,6 +10,7 @@
 #include <source_location>
 
 #include <foundry/hashing.hpp>
+#include <foundry/integral.hpp>
 #include <foundry/compile_time.hpp>
 
 namespace Foundry {
@@ -79,12 +80,9 @@ namespace Foundry {
     template<typename T>
     class TypeIdentifierRandom {
     private:
-        static_assert(Meta::typeId<int>() != Meta::typeId<float>(), "Your compiler does not support type identifiers!");
-        static_assert(Meta::typeId<float>() == Meta::typeId<float>(), "Your compiler does not support type identifiers!");
-
-        inline static constexpr std::uint64_t Hash = FNV1A::hash(Meta::typeId<T>().view());
+        inline static constexpr uint128_t Hash = Meta::typeId<T>().asInt();
     public:
-        inline static constexpr std::uint64_t get() noexcept {
+        inline static constexpr uint128_t get() noexcept {
             return Hash;
         }
     };

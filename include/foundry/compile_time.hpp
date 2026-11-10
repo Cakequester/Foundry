@@ -21,16 +21,6 @@
 #include <stdexcept>
 
 namespace Foundry {
-    template<typename T>
-    inline constexpr bool template_failure() noexcept {
-        return false;
-    }
-
-    template<auto A>
-    inline constexpr bool template_failure() noexcept {
-        return false;
-    }
-
     template<typename T, typename... Rest>
     struct variadic_front {
         using type = T;
@@ -50,6 +40,15 @@ namespace Foundry {
     template<typename T>
     using matching_integral_t = matching_integral<T>::type;
 
+    template <typename T>
+    concept character = std::is_same_v<std::decay_t<T>, char> ||
+        std::is_same_v<std::decay_t<T>, signed char> ||
+        std::is_same_v<std::decay_t<T>, unsigned char> ||
+        std::is_same_v<std::decay_t<T>, wchar_t> ||
+        std::is_same_v<std::decay_t<T>, char8_t> ||
+        std::is_same_v<std::decay_t<T>, char16_t> ||
+        std::is_same_v<std::decay_t<T>, char32_t>;
+
     namespace detail {
         template<auto Value>
         struct are_values_equal_helper {};
@@ -60,85 +59,35 @@ namespace Foundry {
         return std::same_as<detail::are_values_equal_helper<A>, detail::are_values_equal_helper<B>>;
     }
 
-    // TODO: Make first-class type with full suite of features. This is long overdue.
-    template<std::size_t N>
-    class FixedString {
-    public:
-        std::array<char, N> _chars{};
-
-        inline constexpr FixedString() noexcept {}
-
-        inline constexpr FixedString(const char(&str)[N]) noexcept {
-            for (std::size_t i = 0; i < N; ++i) _chars[i] = str[i];
-        }
-
-        template<std::size_t M>
-        inline constexpr bool operator==(const FixedString<M>& other) const noexcept {
-            if constexpr (N != M) return false;
-            else return std::equal(_chars.begin(), _chars.end(), other._chars.begin());
-        }
-
-        inline constexpr std::string_view view() const noexcept {
-            return std::string_view(_chars);
-        }
-
-        inline constexpr std::size_t size() const noexcept {
-            return N - 1;
-        }
-    };
-
-    // TODO: Replace these two functions.
-    template<std::size_t N>
-    inline constexpr FixedString<N> makeFixedStringFromPointer(const char *str) {
-        FixedString<N> result{};
-        for (std::size_t i = 0; i < N; ++i) result._chars[i] = str[i];
-        return result;
+    template<std::size_t N, typename Func>
+        requires(std::invocable<Func>)
+    inline constexpr void constexpr_for(Func&& func) {
+        [&]<std::size_t... I>(std::index_sequence<I...>) {
+            (func.template operator()<I>(), ...);
+        }(std::make_index_sequence<N>{});
     }
 
-    template<FixedString S, FixedString Prefix>
-    inline constexpr bool string_starts_with() noexcept {
-        if constexpr (Prefix.size() > S.size())
-            return false;
-
-        for (std::size_t i = 0; i < Prefix.size(); ++i)
-            if (S._chars[i] != Prefix._chars[i])
-                return false;
-
-        return true;
-    }
-
-    template <typename Signature>
-    class FunctionRef;
-
-    template <typename R, typename... Args>
-    class FunctionRef<R(Args...)> {
-    private:
-        void *_obj = nullptr;
-        R(*_func)(void*, Args...) = nullptr;
+    template<typename T>
+    class deducible {
     public:
-        inline constexpr FunctionRef() noexcept = delete;
-        inline constexpr FunctionRef(const FunctionRef&) noexcept = default;
-        inline constexpr FunctionRef& operator=(const FunctionRef&) noexcept = default;
-
-        template <typename F>
-            requires (!std::same_as<std::decay_t<F>, FunctionRef>&& std::is_invocable_r_v<R, F, Args...>)
-        inline constexpr FunctionRef(F&& f) noexcept {
-            _obj = const_cast<void*>(static_cast<const void*>(std::addressof(f)));
-            _func = [](void *ptr, Args... args) -> R {
-                return (*static_cast<std::decay_t<F>>(ptr))(std::forward<Args>(args)...);
-            };
-        }
-
-        inline R invoke(Args&&... args) const {
-            return std::invoke(_func, _obj, std::forward<Args>(args)...);
-        }
-
-        inline R operator()(Args&&... args) const {
-            return invoke(std::forward<Args>(args)...);
-        }
+        inline constexpr deducible() noexcept {}
     };
 
-    // TODO: Add a backport of std::constant_wrapper!
+    template<typename T>
+    inline constexpr deducible<T> deducible_of() noexcept {
+        return deducible<T>();
+    }
+
+    // TODO: Add operator lifting.
+    template<auto Value>
+    class constant_wrapper {
+    public:
+        using type = decltype(Value);
+        inline static constexpr type value = Value;
+    };
+
+    template<auto Value>
+    inline constexpr constant_wrapper<Value> cw{};
 
     template<bool Condition, typename T>
     class OptionalField {

@@ -4,6 +4,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 project(Foundry)
 
-set(CCT_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(PROJECT_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_subdirectory(unittests)
+if(BUILD_TESTING)
+	add_subdirectory(unittests)
+endif()

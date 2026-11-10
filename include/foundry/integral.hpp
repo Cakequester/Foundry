@@ -100,7 +100,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr void assign(const T& value) noexcept {
             _data.fill(isNegative(value) ? 0xFF : 0x00);
             for (std::size_t i = 0; i < std::min(sizeof(value), SizeInBytes); ++i)
@@ -119,7 +119,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline static constexpr bool isNegative(const T& v) noexcept {
             if constexpr (T::IsUnsigned) return false;
             else return (v._data[getMSB<T>()] & 0x80) != 0;
@@ -138,7 +138,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline static constexpr bool isUnsignedType() noexcept {
             return T::IsUnsigned;
         }
@@ -149,13 +149,13 @@ namespace Foundry {
 
             using UniformType = BitInt<UniformSize * 8, isUnsignedType<T>() || isUnsignedType<U>()>;
 
-            if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint8_t>::digits>())
+            if constexpr (Meta::instance_of<UniformType, Meta::toUnderlyingType<Foundry::BitInt>(), std::numeric_limits<std::uint8_t>::digits>())
                 return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint8_t>, std::type_identity<std::int8_t>>{};
-            else if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint16_t>::digits>())
+            else if constexpr (Meta::instance_of<UniformType, Meta::toUnderlyingType<Foundry::BitInt>(), std::numeric_limits<std::uint16_t>::digits>())
                 return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint16_t>, std::type_identity<std::int16_t>>{};
-            else if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint32_t>::digits>())
+            else if constexpr (Meta::instance_of<UniformType, Meta::toUnderlyingType<Foundry::BitInt>(), std::numeric_limits<std::uint32_t>::digits>())
                 return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint32_t>, std::type_identity<std::int32_t>>{};
-            else if constexpr (Meta::instance_of<UniformType, Foundry::BitInt, std::numeric_limits<std::uint64_t>::digits>())
+            else if constexpr (Meta::instance_of<UniformType, Meta::toUnderlyingType<Foundry::BitInt>(), std::numeric_limits<std::uint64_t>::digits>())
                 return std::conditional_t<UniformType::IsUnsigned, std::type_identity<std::uint64_t>, std::type_identity<std::int64_t>>{};
             else
                 return std::type_identity<UniformType>{};
@@ -179,7 +179,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr BitInt(T value) noexcept {
             assign(value);
         }
@@ -192,7 +192,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr BitInt& operator=(T rhs) noexcept {
             assign(rhs);
             return *this;
@@ -258,7 +258,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr bool operator==(const T& rhs) const noexcept {
             const bool lhs_negative = !Unsigned && isNegative();
             const bool rhs_negative = !T::IsUnsigned && isNegative(rhs);
@@ -284,7 +284,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr std::strong_ordering operator<=>(const T& rhs) const noexcept {
             const bool lhs_negative = !Unsigned && isNegative();
             const bool rhs_negative = !T::IsUnsigned && isNegative(rhs);
@@ -403,7 +403,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr BitInt& operator|=(const T& rhs) noexcept {
             const std::uint8_t extension_byte = (!T::IsUnsigned && isNegative(rhs)) ? 0xFF : 0x00;
 
@@ -435,7 +435,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr promoted_integral<T, BitInt> operator|(const T& rhs) const noexcept {
             constexpr std::size_t UniformSize = std::max(SizeInBytes, sizeof(rhs));
 
@@ -459,7 +459,7 @@ namespace Foundry {
         }
 
         template<typename T>
-            requires(Meta::instance_of<T, Foundry::BitInt>())
+            requires(Meta::instance_of<T, Meta::toUnderlyingType<Foundry::BitInt>()>())
         inline constexpr operator T() const noexcept {
             return T(*this);
         }

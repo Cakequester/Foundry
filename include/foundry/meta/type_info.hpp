@@ -11,155 +11,54 @@
 
 #include <source_location>
 
+#include <foundry/meta/underlying_type.hpp>
+
 #include <foundry/compile_time.hpp>
 
 namespace Foundry::Meta {
-    namespace detail {
-        template<template<typename...> class T, typename U>
-        struct instance_of_helper : std::false_type {};
-
-        template<template<typename...> class T, typename... Args>
-        struct instance_of_helper<T, T<Args...>> : std::true_type {};
-
-        template<template<auto...> class T, typename U>
-        struct instance_of_helper_2 : std::false_type {};
-
-        template<template<auto...> class T, auto... Args>
-        struct instance_of_helper_2<T, T<Args...>> : std::true_type {};
-
-        template<template<typename, auto> class T, typename U>
-        struct instance_of_helper_3 : std::false_type {};
-
-        template<template<typename, auto> class T, typename One, auto Two>
-        struct instance_of_helper_3<T, T<One, Two>> : std::true_type {};
-
-        template<template<auto, typename> class T, typename U>
-        struct instance_of_helper_4 : std::false_type {};
-
-        template<template<auto, typename> class T, auto One, typename Two>
-        struct instance_of_helper_4<T, T<One, Two>> : std::true_type {};
-    }
-
-    template<typename T, template<typename...> class U>
+    template<typename T, auto U>
+        requires(std::derived_from<decltype(U), detail::UnderlyingTypeBase>)
     inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper<U, std::remove_cvref_t<T>>::value;
+        return std::same_as<decltype(extractUnderlyingType<T>()), decltype(U)>;
     }
-
-    template<typename T, template<auto...> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_2<U, std::remove_cvref_t<T>>::value;
-    }
-
-    template<typename T, template<typename, auto> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_3<U, std::remove_cvref_t<T>>::value;
-    }
-
-    template<typename T, template<auto, typename> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_4<U, std::remove_cvref_t<T>>::value;
-    }
-
-    template<auto Value, template<typename...> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper<U, std::remove_cvref_t<decltype(Value)>>::value;
-    }
-
-    template<auto Value, template<auto...> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_2<U, std::remove_cvref_t<decltype(Value)>>::value;
-    }
-
-    template<auto Value, template<typename, auto> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_3<U, std::remove_cvref_t<decltype(Value)>>::value;
-    }
-
-    template<auto Value, template<auto, typename> class U>
-    inline constexpr bool instance_of() noexcept {
-        return detail::instance_of_helper_4<U, std::remove_cvref_t<decltype(Value)>>::value;
-    }
-
-    template<typename Derived, template<typename...> class Base, typename... Args>
-    concept derived_from_instance = requires(Derived * p) {
-        [] <typename... Args>(Base<Args...>*) {}(p);
-    };
 }
 
+#include <foundry/meta/template_info.hpp>
 #include <foundry/template_lists.hpp>
 
 namespace Foundry::Meta {
-    namespace detail {
-        template<template<typename...> class T, typename U, typename... Args>
-        struct specialized_instance_of_helper : std::false_type {};
-
-        template<template<typename...> class T, typename... Us, typename... Args>
-        struct specialized_instance_of_helper<T, T<Us...>, Args...> : std::bool_constant<TypeList<Us...>::template startsWith<Args...>()> {};
-
-        template<template<auto...> class T, typename U, auto... Args>
-        struct specialized_instance_of_helper_2 : std::false_type {};
-
-        template<template<auto...> class T, auto... Us, auto... Args>
-        struct specialized_instance_of_helper_2<T, T<Us...>, Args...> : std::bool_constant<ValueList<Us...>::template startsWith<Args...>()> {};
-
-        template<template<typename, auto> class T, typename U, typename One, auto Two>
-        struct specialized_instance_of_helper_3 : std::false_type {};
-
-        template<template<typename, auto> class T, typename One, auto Two>
-        struct specialized_instance_of_helper_3<T, T<One, Two>, One, Two> : std::true_type {};
-
-        template<template<auto, typename> class T, typename U, auto One, typename Two>
-        struct specialized_instance_of_helper_4 : std::false_type {};
-
-        template<template<auto, typename> class T, auto One, typename Two>
-        struct specialized_instance_of_helper_4<T, T<One, Two>, One, Two> : std::true_type {};
+    template<typename T, auto U, typename... Args>
+        requires(sizeof...(Args) > 0)
+    inline constexpr bool instance_of() noexcept {
+        if constexpr (!instance_of<T, U>()) return false;
+        else
+            return getTemplateInfo<T>().templates.startsWith<makeMixedTemplate<Args>()...>();
     }
 
-    template<typename T, template<typename...> class U, typename... Args>
-        requires (sizeof...(Args) > 0)
+    template<typename T, auto U, auto... Args>
+        requires(sizeof...(Args) > 0)
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper<U, std::remove_cvref_t<T>, Args...>::value;
+        if constexpr (!instance_of<T, U>()) return false;
+        else
+            return getTemplateInfo<T>().templates.startsWith<makeMixedTemplate<Args>()...>();
     }
 
-    template<typename T, template<auto...> class U, auto... Args>
-        requires (sizeof...(Args) > 0)
+    template<typename T, auto U, typename One, auto Two>
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_2<U, std::remove_cvref_t<T>, Args...>::value;
+        if constexpr (!instance_of<T, U>()) return false;
+        else
+            return getTemplateInfo<T>().templates.startsWith<makeMixedTemplate<One>(), makeMixedTemplate<Two>()>();
     }
 
-    template<typename T, template<typename, auto> class U, typename One, auto Two>
+    template<typename T, auto U, auto One, typename Two>
     inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_3<U, std::remove_cvref_t<T>, One, Two>::value;
-    }
-
-    template<typename T, template<auto, typename> class U, auto One, typename Two>
-    inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_4<U, std::remove_cvref_t<T>, One, Two>::value;
-    }
-
-    template<auto Value, template<typename...> class U, typename... Args>
-        requires (sizeof...(Args) > 0)
-    inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper<U, std::remove_cvref_t<decltype(Value)>, Args...>::value;
-    }
-
-    template<auto Value, template<auto...> class U, auto... Args>
-        requires (sizeof...(Args) > 0)
-    inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_2<U, std::remove_cvref_t<decltype(Value)>, Args...>::value;
-    }
-
-    template<auto Value, template<typename, auto> class U, typename One, auto Two>
-    inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_3<U, std::remove_cvref_t<decltype(Value)>, One, Two>::value;
-    }
-
-    template<auto Value, template<auto, typename> class U, auto One, typename Two>
-    inline constexpr bool instance_of() noexcept {
-        return detail::specialized_instance_of_helper_4<U, std::remove_cvref_t<decltype(Value)>, One, Two>::value;
+        if constexpr (!instance_of<T, U>()) return false;
+        else
+            return getTemplateInfo<T>().templates.startsWith<makeMixedTemplate<One>(), makeMixedTemplate<Two>()>();
     }
 }
 
+#include <foundry/hashing.hpp>
 #include <foundry/integral.hpp>
 
 namespace Foundry::Meta {
@@ -194,12 +93,21 @@ namespace Foundry::Meta {
         }
 
         inline constexpr std::strong_ordering operator<=>(const TypeIdentifier& rhs) const noexcept = delete;
+
+        inline constexpr uint128_t asInt() const noexcept {
+            return _identifier;
+        }
     };
 
     template<typename T>
     inline constexpr TypeIdentifier typeId() noexcept {
         return TypeIdentifier::of<T>();
     }
+
+    template <typename T>
+    concept is_structural = requires {
+        [] <T>() {};
+    };
 }
 
 #endif

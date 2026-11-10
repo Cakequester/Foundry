@@ -7,5 +7,5 @@ class Foo {};
 
 TEST(TemplateInfo, Types) {
 	constexpr auto Info = Foundry::Meta::getTemplateInfo<Foo<float, 30>>();
-	EXPECT_TRUE(Info.Types.contains<float>());
+	EXPECT_TRUE(Info.templates.contains<float>());
 }

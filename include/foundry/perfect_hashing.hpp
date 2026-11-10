@@ -24,7 +24,7 @@ namespace Foundry {
     class PairFirstKeyStrategy : public PerfectHashKeyStrategy {
     public:
         template<typename P>
-            requires(Meta::instance_of<P, std::pair>())
+            requires(Meta::instance_of<P, Meta::toUnderlyingType<std::pair>()>())
         inline static constexpr auto get(const P& p) noexcept { return p.first; }
     };
 
@@ -81,7 +81,7 @@ namespace Foundry {
 
                 std::sort(order.begin(), order.end(), [&buckets](std::size_t a, std::size_t b) {
                     return buckets[a].count > buckets[b].count;
-                });
+                    });
 
                 std::array<bool, TableSize> occupied{};
                 _table.fill(TableSize);

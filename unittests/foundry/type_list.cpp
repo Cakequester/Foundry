@@ -42,7 +42,8 @@ TEST(TypeList, Append) {
 }
 
 TEST(TypeList, AppendOther) {
-	using appended = decltype(list::list::appendList<Foundry::TypeList<list::marker_t, list::marker_t>>());
+	using inner_list = Foundry::TypeList<list::marker_t, list::marker_t>;
+	using appended = decltype(list::list::appendList<inner_list>());
 	EXPECT_TRUE((std::same_as<decltype(appended::back())::type, list::marker_t>));
 }
 

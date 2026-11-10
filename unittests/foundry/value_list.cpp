@@ -3,8 +3,8 @@
 #include <foundry/foundry.hpp>
 
 namespace list {
-	constexpr auto marker = Foundry::FixedString("Marker");
-	using list = Foundry::ValueList<0, Foundry::FixedString("Hello, World!"), 32, 54.43, marker>;
+	constexpr auto marker = Foundry::CompileString("Marker");
+	using list = Foundry::ValueList<0, Foundry::CompileString("Hello, World!"), 32, 54.43, marker>;
 
 	constexpr int size = 5;
 }
