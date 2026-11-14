@@ -8,7 +8,7 @@ namespace map {
 
 	constexpr int size = 3;
 
-	constexpr auto map = Foundry::makePerfectHashMap<int, int>(std::pair{ 314, 523 }, std::pair{ testing_key, testing_value }, std::pair{ 56723, 90993 });
+	constexpr auto map = Foundry::make_perfect_map<int, int>(std::pair{ 314, 523 }, std::pair{ testing_key, testing_value }, std::pair{ 56723, 90993 });
 }
 
 TEST(CompileMap, ContainsKey) {

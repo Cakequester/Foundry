@@ -22,8 +22,17 @@
 namespace Foundry {
     template<std::size_t Size, bool Unsigned = false>
     class BitInt {
-        static_assert(Size > 0, "BitInt must be greater than zero!");
     private:
+        static_assert(Size > 0, "BitInt must be greater than zero!");
+
+        template<std::floating_point T>
+        struct matching_integral {
+            using type = std::conditional_t<std::same_as<T, float>, std::uint32_t, std::uint64_t>;
+        };
+
+        template<typename T>
+        using matching_integral_t = matching_integral<T>::type;
+
         inline static constexpr std::size_t SizeInBytes = (Size + std::numeric_limits<std::uint8_t>::digits - 1) / std::numeric_limits<std::uint8_t>::digits;
 
         template<typename T>

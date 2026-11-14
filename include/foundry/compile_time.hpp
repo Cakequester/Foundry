@@ -29,16 +29,11 @@ namespace Foundry {
     template<typename... Ts>
     using variadic_front_t = variadic_front<Ts...>::type;
 
+    template<typename... Ts>
+    concept identical_types = (std::same_as<typename variadic_front<Ts...>::type, Ts> && ...);
+
     template<auto Constraint, typename... Ts>
     concept satisfies_all = (Constraint.template operator()<Ts>() && ...);
-
-    template<std::floating_point T>
-    struct matching_integral {
-        using type = std::conditional_t<std::same_as<T, float>, std::uint32_t, std::uint64_t>;
-    };
-
-    template<typename T>
-    using matching_integral_t = matching_integral<T>::type;
 
     template <typename T>
     concept character = std::is_same_v<std::decay_t<T>, char> ||
