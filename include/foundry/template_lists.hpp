@@ -15,28 +15,28 @@
 #include <foundry/meta/type_info.hpp>
 
 // TODO: See if macros could reduce code re-use here.
-namespace Foundry {
+namespace foundry {
     namespace detail {
         template<std::size_t I, typename Current, typename... Rest>
-        inline constexpr auto getTypeAtImpl() noexcept {
+        inline constexpr auto get_type_at_impl() noexcept {
             if constexpr (I == 0) return std::type_identity<Current>{};
-            else return getTypeAtImpl<I - 1, Rest...>();
+            else return get_type_at_impl<I - 1, Rest...>();
         }
     }
 
     template<std::size_t I, typename... Ts>
-    inline constexpr auto getTypeAt() noexcept requires(sizeof...(Ts) > 0) {
+    inline constexpr auto get_type_at() noexcept requires(sizeof...(Ts) > 0) {
         static_assert(I < sizeof...(Ts), "Index is out of bounds.");
-        return detail::getTypeAtImpl<I, Ts...>();
+        return detail::get_type_at_impl<I, Ts...>();
     }
 
     template<typename T, typename... Ts>
-    inline constexpr bool containsType() noexcept {
+    inline constexpr bool contains_type() noexcept {
         return (std::same_as<T, Ts> || ...);
     }
 
     template<typename T, typename... Ts>
-    inline constexpr std::optional<std::size_t> indexOfType() noexcept {
+    inline constexpr std::optional<std::size_t> index_of_type() noexcept {
         std::size_t i = 0;
         std::optional<std::size_t> result;
         (((std::same_as<T, Ts> && !result) ? (result = i, true) : (++i, false)) || ...);
@@ -44,33 +44,29 @@ namespace Foundry {
     }
 
     template<typename... Ts>
-    class TypeList {
+    class type_list {
     public:
         template<typename...>
-        friend class TypeList;
+        friend class type_list;
 
         template<std::size_t I>
-        using at = typename decltype(getTypeAt<I, Ts...>())::type;
+        using at = typename decltype(get_type_at<I, Ts...>())::type;
 
-        inline static constexpr auto front() noexcept requires(sizeof...(Ts) > 0) {
+        static constexpr auto front() noexcept requires(sizeof...(Ts) > 0) {
             return std::type_identity<at<0>>{};
         }
 
-        inline static constexpr auto back() noexcept requires(sizeof...(Ts) > 0) {
+        static constexpr auto back() noexcept requires(sizeof...(Ts) > 0) {
             return std::type_identity<at<size() - 1>>{};
         }
 
         template<typename T>
-        inline static constexpr bool contains() noexcept {
-            return containsType<T, Ts...>();
-        }
-
-        inline static constexpr bool contains() noexcept {
-        
+        static constexpr bool contains() noexcept {
+            return contains_type<T, Ts...>();
         }
 
         template<typename... Us>
-        inline static constexpr bool startsWith() noexcept {
+        static constexpr bool starts_with() noexcept {
             if constexpr (sizeof...(Us) > sizeof...(Ts)) return false;
             else return []<std::size_t... I>(std::index_sequence<I...>) {
                 return (std::same_as<at<I>, Us> && ...);
@@ -78,63 +74,71 @@ namespace Foundry {
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, Meta::toUnderlyingType<TypeList>()>())
-        static constexpr bool startsWithList() noexcept {
-            return[]<typename... Us>(deducible<TypeList<Us...>>) {
-                return startsWith<Us...>();
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::type_list>()>())
+        static constexpr bool starts_with_list() noexcept {
+            return[]<typename... Us>(deducible<type_list<Us...>>) {
+                return starts_with<Us...>();
             }(deducible_of<Other>());
         }
 
         template<typename T>
-        inline static constexpr std::optional<std::size_t> indexOf() noexcept {
-            return indexOfType<T, Ts...>();
+        static constexpr std::optional<std::size_t> index_of() noexcept {
+            return index_of_type<T, Ts...>();
         }
 
-        inline static constexpr auto reverse() noexcept {
+        static constexpr auto reverse() noexcept {
             return []<std::size_t... I>(std::index_sequence<I...>) {
-                return TypeList<at<sizeof...(Ts) - 1 - I>...>{};
+                return type_list<at<sizeof...(Ts) - 1 - I>...>{};
             }(std::index_sequence_for<Ts...>{});
         }
 
         template<std::size_t Start, std::size_t End>
-        inline static constexpr auto sublist() noexcept {
+        static constexpr auto sublist() noexcept {
             static_assert(Start <= End && End <= sizeof...(Ts), "Invalid range.");
             return []<std::size_t S, std::size_t... I>(constant_wrapper<S>, std::index_sequence<I...>) {
-                return TypeList<at<S + I>...>{};
+                return type_list<at<S + I>...>{};
             }(cw<Start>, std::make_index_sequence<End - Start>{});
         }
 
         template<std::size_t End>
-        inline static constexpr auto sublist() noexcept {
+        static constexpr auto sublist() noexcept {
             return sublist<0, End>();
         }
 
-        template<typename T>
-        inline static constexpr auto pushFront() noexcept {
-            return TypeList<T, Ts...>{};
-        }
-
         template<typename... Us>
-        inline static constexpr auto append() noexcept {
-            return TypeList<Ts..., Us...>{};
+        static constexpr auto push_front() noexcept {
+            return type_list<Us..., Ts...>{};
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, Meta::toUnderlyingType<Foundry::TypeList>()>())
-        inline static constexpr auto appendList() noexcept {
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::type_list>()>())
+        static constexpr auto push_front_list() noexcept {
+            return []<typename... Us>(deducible<type_list<Us...>>) {
+                return type_list<Us..., Ts...>{};
+            }(deducible_of<Other>());
+        }
+
+        template<typename... Us>
+        static constexpr auto append() noexcept {
+            return type_list<Ts..., Us...>{};
+        }
+
+        template<typename Other>
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::type_list>()>())
+        inline static constexpr auto append_list() noexcept {
             return []<typename... Others>() {
-                return TypeList<Ts..., Others...>{};
+                return type_list<Ts..., Others...>{};
             }();
         }
 
         template<typename T>
         inline static constexpr auto remove() noexcept {
-            constexpr std::optional<std::size_t> index_of = indexOf<T>();
+            constexpr std::optional<std::size_t> index = index_of<T>();
 
-            if constexpr (!index_of) return TypeList<Ts...>{};
+            if constexpr (!index) return type_list<Ts...>{};
             else return []<std::size_t Skip, std::size_t... I>(constant_wrapper<Skip>, std::index_sequence<I...>) {
-                return TypeList<at<(I < Skip ? I : I + 1)>...>{};
-            }(cw<*index_of>, std::make_index_sequence<sizeof...(Ts) - 1>{});
+                return type_list<at<(I < Skip ? I : I + 1)>...>{};
+            }(cw<*index>, std::make_index_sequence<sizeof...(Ts) - 1>{});
         }
 
         inline static constexpr std::size_t size() noexcept {
@@ -148,25 +152,25 @@ namespace Foundry {
 
     namespace detail {
         template<std::size_t I, auto Current, auto... Rest>
-        inline constexpr decltype(auto) getValueAtImpl() noexcept {
+        inline constexpr decltype(auto) get_value_at_impl() noexcept {
             if constexpr (I == 0) return Current;
-            else return getValueAtImpl<I - 1, Rest...>();
+            else return get_value_at_impl<I - 1, Rest...>();
         }
     }
 
     template<std::size_t I, auto... Values>
-    inline constexpr decltype(auto) getValueAt() noexcept requires(sizeof...(Values) > 0) {
+    inline constexpr decltype(auto) get_value_at() noexcept requires(sizeof...(Values) > 0) {
         static_assert(I < sizeof...(Values), "Index is out of bounds.");
-        return detail::getValueAtImpl<I, Values...>();
+        return detail::get_value_at_impl<I, Values...>();
     }
 
     template<auto Value, auto... Values>
-    inline constexpr bool containsValue() noexcept {
+    inline constexpr bool contains_value() noexcept {
         return ((are_values_equal<Value, Values>()) || ...);
     }
 
     template<auto Value, auto... Values>
-    inline constexpr std::optional<std::size_t> indexOfValue() noexcept {
+    inline constexpr std::optional<std::size_t> index_of_value() noexcept {
         std::size_t i = 0;
         std::optional<std::size_t> result;
         (((are_values_equal<Value, Values>() && !result) ? (result = i, true) : (++i, false)) || ...);
@@ -174,21 +178,21 @@ namespace Foundry {
     }
 
     template<auto... Values>
-    class ValueList {
+    class value_list {
     private:
-        // MSVC lambda bug. I have NO idea what causes this or if it's an existing bug, but without this you get C7746.
+        // MSVC lambda bug. I have NO idea what causes this or if it's an existing bug, but without this you get C7746 on call sites.
         template<std::size_t... I>
-        inline static constexpr auto reverseImpl(std::index_sequence<I...>) noexcept {
-            return ValueList<at<sizeof...(Values) - 1 - I>()...>{};
+        inline static constexpr auto reverse_impl(std::index_sequence<I...>) noexcept {
+            return value_list<at<sizeof...(Values) - 1 - I>()...>{};
         }
     public:
         template<auto...>
-        friend class ValueList;
+        friend class value_list;
 
         template<std::size_t I>
         inline static constexpr decltype(auto) at() noexcept requires(sizeof...(Values) > 0) {
             static_assert(I < sizeof...(Values), "Index out of bounds");
-            return getValueAt<I, Values...>();
+            return get_value_at<I, Values...>();
         }
 
         inline static constexpr decltype(auto) front() noexcept requires(sizeof...(Values) > 0) {
@@ -201,11 +205,11 @@ namespace Foundry {
 
         template<auto Value>
         inline static constexpr bool contains() noexcept {
-            return containsValue<Value, Values...>();
+            return contains_value<Value, Values...>();
         }
 
         template<auto... Others>
-        inline static constexpr bool startsWith() noexcept {
+        inline static constexpr bool starts_with() noexcept {
             if constexpr (sizeof...(Others) > sizeof...(Values)) return false;
             else return []<std::size_t... I>(std::index_sequence<I...>) {
                 return (are_values_equal<at<I>(), Others>() && ...);
@@ -213,27 +217,27 @@ namespace Foundry {
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, Meta::toUnderlyingType<ValueList>()>())
-        static constexpr bool startsWithList() noexcept {
-            return []<auto... Others>(deducible<ValueList<Others...>>) {
-                return startsWith<Others...>();
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::value_list>()>())
+        static constexpr bool starts_with_list() noexcept {
+            return []<auto... Others>(deducible<value_list<Others...>>) {
+                return starts_with<Others...>();
             }(deducible_of<Other>());
         }
 
         template<auto Value>
-        inline static constexpr std::optional<std::size_t> indexOf() noexcept {
-            return indexOfValue<Value, Values...>();
+        inline static constexpr std::optional<std::size_t> index_of() noexcept {
+            return index_of_value<Value, Values...>();
         }
 
         inline static constexpr auto reverse() noexcept {
-            return reverseImpl(std::make_index_sequence<sizeof...(Values)>{});
+            return reverse_impl(std::make_index_sequence<sizeof...(Values)>{});
         }
 
         template<std::size_t Start, std::size_t End>
         inline static constexpr auto sublist() noexcept {
             static_assert(Start <= End && End <= sizeof...(Values), "Invalid range.");
             return []<std::size_t S, std::size_t... I>(constant_wrapper<S>, std::index_sequence<I...>) {
-                return ValueList<at<S + I>()...>{};
+                return value_list<at<S + I>()...>{};
             }(cw<Start>, std::make_index_sequence<End - Start>{});
         }
 
@@ -242,32 +246,32 @@ namespace Foundry {
             return sublist<0, End>();
         }
 
-        template<auto Value>
-        inline static constexpr auto pushFront() noexcept {
-            return ValueList<Value, Values...>{};
+        template<auto... Others>
+        inline static constexpr auto push_front() noexcept {
+            return value_list<Others..., Values...>{};
         }
 
         template<auto... Others>
         inline static constexpr auto append() noexcept {
-            return ValueList<Values..., Others...>{};
+            return value_list<Values..., Others...>{};
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, Meta::toUnderlyingType<Foundry::ValueList>()>())
-        inline static constexpr auto appendList() noexcept {
-            return []<auto... Others>(deducible<ValueList<Others...>>) {
-                return ValueList<Values..., Others...>{};
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::value_list>()>())
+        inline static constexpr auto append_list() noexcept {
+            return []<auto... Others>(deducible<value_list<Others...>>) {
+                return value_list<Values..., Others...>{};
             }(deducible_of<Other>());
         }
 
         template<auto Value>
         inline static constexpr auto remove() noexcept {
-            constexpr std::optional<std::size_t> index_of = indexOf<Value>();
+            constexpr std::optional<std::size_t> index = index_of<Value>();
 
-            if constexpr (!index_of) return ValueList<Values...>{};
+            if constexpr (!index) return value_list<Values...>{};
             else return []<std::size_t Skip, std::size_t... I>(constant_wrapper<Skip>, std::index_sequence<I...>) {
-                return ValueList<at<(I < Skip ? I : I + 1)>()...>{};
-            }(cw<*index_of>, std::make_index_sequence<sizeof...(Values) - 1>{});
+                return value_list<at<(I < Skip ? I : I + 1)>()...>{};
+            }(cw<*index>, std::make_index_sequence<sizeof...(Values) - 1>{});
         }
 
         inline static constexpr std::size_t size() noexcept {
@@ -280,14 +284,14 @@ namespace Foundry {
     };
 
     namespace detail {
-        class MixedTemplateNull {};
+        class mixed_template_null {};
     }
 
     template<typename T, auto Value>
-    class MixedTemplate {
+    class mixed_template {
     public:
-        inline static constexpr bool HasType = !std::same_as<T, detail::MixedTemplateNull>;
-        inline static constexpr bool HasValue = !std::same_as<std::remove_cvref_t<decltype(Value)>, detail::MixedTemplateNull>;
+        inline static constexpr bool HasType = !std::same_as<T, detail::mixed_template_null>;
+        inline static constexpr bool HasValue = !std::same_as<std::remove_cvref_t<decltype(Value)>, detail::mixed_template_null>;
 
         static_assert(HasType != HasValue, "Exactly one of a type or value must be supplied!");
 
@@ -297,31 +301,31 @@ namespace Foundry {
 
         class type_holder {
         public:
-            static_assert(HasType, "This MixedTemplate does not contain a type!");
+            static_assert(HasType, "This mixed_template does not contain a type!");
 
             using type = T;
         };
     };
 
     template<typename T>
-    inline constexpr auto makeMixedTemplate() noexcept {
-        return MixedTemplate<T, detail::MixedTemplateNull{}>{};
+    inline constexpr auto make_mixed_template() noexcept {
+        return mixed_template<T, detail::mixed_template_null{}>{};
     }
 
     template<auto Value>
-    inline constexpr auto makeMixedTemplate() noexcept {
-        return MixedTemplate<detail::MixedTemplateNull, Value>{};
+    inline constexpr auto make_mixed_template() noexcept {
+        return mixed_template<detail::mixed_template_null, Value>{};
     }
 
     // TODO: Fix code duplicate by turning certain lambdas into functions.
     template<auto... Templates>
-        requires((Meta::instance_of<decltype(Templates), Meta::toUnderlyingType<MixedTemplate>()>() && ...))
-    class MixedTemplateList {
+        requires((meta::instance_of<decltype(Templates), meta::to_underlying_type<mixed_template>()>() && ...))
+    class mixed_template_list {
     public:
         template<std::size_t I>
         inline static constexpr auto at() noexcept requires(sizeof...(Templates) > 0) {
             static_assert(I < sizeof...(Templates), "Index out of bounds");
-            return getValueAt<I, Templates...>();
+            return get_value_at<I, Templates...>();
         }
 
         inline static constexpr auto front() noexcept requires(sizeof...(Templates) > 0) {
@@ -353,8 +357,8 @@ namespace Foundry {
         }
 
         template<auto... Others>
-            requires((Meta::instance_of<decltype(Others), Meta::toUnderlyingType<Foundry::MixedTemplate>()>() && ...))
-        inline static constexpr bool startsWith() noexcept {
+            requires((meta::instance_of<decltype(Others), meta::to_underlying_type<foundry::mixed_template>()>() && ...))
+        inline static constexpr bool starts_with() noexcept {
             if constexpr (sizeof...(Others) > sizeof...(Templates)) return false;
             else return []<std::size_t... I>(std::index_sequence<I...>) {
                 return (std::same_as<decltype(at<I>()), decltype(Others)> && ...);
@@ -362,15 +366,15 @@ namespace Foundry {
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, Meta::toUnderlyingType<Foundry::MixedTemplateList>()>())
-        static constexpr bool startsWithList() noexcept {
-            return []<auto... Others>(deducible<MixedTemplateList<Others...>>) {
-                return startsWith<Others...>();
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::mixed_template_list>()>())
+        static constexpr bool starts_with_list() noexcept {
+            return []<auto... Others>(deducible<mixed_template_list<Others...>>) {
+                return starts_with<Others...>();
             }(deducible_of<Other>());
         }
 
         template<typename T>
-        inline static constexpr std::optional<std::size_t> indexOf() noexcept {
+        inline static constexpr std::optional<std::size_t> index_of() noexcept {
             std::size_t i = 0;
             std::optional<std::size_t> result;
             (((Templates.HasType && std::same_as<T, typename decltype(Templates)::type_holder::type>() && !result) ? (result = i, true) : (++i, false)) || ...);
@@ -378,7 +382,7 @@ namespace Foundry {
         }
 
         template<auto Value>
-        inline static constexpr std::optional<std::size_t> indexOf() noexcept {
+        inline static constexpr std::optional<std::size_t> index_of() noexcept {
             std::size_t i = 0;
             std::optional<std::size_t> result;
             (((Templates.HasValue && are_values_equal<Value, Templates.value()>() && !result) ? (result = i, true) : (++i, false)) || ...);
@@ -387,7 +391,7 @@ namespace Foundry {
 
         inline static constexpr auto reverse() noexcept {
             return []<std::size_t... I>(std::index_sequence<I...>) {
-                return MixedTemplateList<at<sizeof...(Templates) - 1 - I>()...>{};
+                return mixed_template_list<at<sizeof...(Templates) - 1 - I>()...>{};
             }(std::make_index_sequence<sizeof...(Templates)>{});
         }
 
@@ -395,7 +399,7 @@ namespace Foundry {
         inline static constexpr auto sublist() noexcept {
             static_assert(Start <= End && End <= sizeof...(Templates), "Invalid range.");
             return []<std::size_t S, std::size_t... I>(constant_wrapper<S>, std::index_sequence<I...>) {
-                return MixedTemplateList<at<S + I>()...>{};
+                return mixed_template_list<at<S + I>()...>{};
             }(cw<Start>, std::make_index_sequence<End - Start>{});
         }
 
@@ -404,52 +408,52 @@ namespace Foundry {
             return sublist<0, End>();
         }
 
-        template<typename T>
-        inline static constexpr auto pushFront() noexcept {
-            return MixedTemplateList<makeMixedTemplate<T>(), Templates...>{};
+        template<typename... Others>
+        inline static constexpr auto push_front() noexcept {
+            return mixed_template_list<make_mixed_template<Others>()..., Templates...>{};
         }
 
-        template<auto Value>
-        inline static constexpr auto pushFront() noexcept {
-            return MixedTemplateList<makeMixedTemplate<Value>(), Templates...>{};
+        template<auto... Others>
+        inline static constexpr auto push_front() noexcept {
+            return mixed_template_list<make_mixed_template<Others>()..., Templates...>{};
         }
 
         template<typename... Others>
         inline static constexpr auto append() noexcept {
-            return MixedTemplateList<Templates..., makeMixedTemplate<Others>()...>{};
+            return mixed_template_list<Templates..., make_mixed_template<Others>()...>{};
         }
 
         template<auto... Others>
         inline static constexpr auto append() noexcept {
-            return MixedTemplateList<Templates..., makeMixedTemplate<Others>()...>{};
+            return mixed_template_list<Templates..., make_mixed_template<Others>()...>{};
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, Meta::toUnderlyingType<Foundry::MixedTemplateList>()>())
-        inline static constexpr auto appendList() noexcept {
-            return []<auto... Others>(deducible<MixedTemplateList<Others...>>) {
-                return MixedTemplateList<Templates..., Others...>{};
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::mixed_template_list>()>())
+        inline static constexpr auto append_list() noexcept {
+            return []<auto... Others>(deducible<mixed_template_list<Others...>>) {
+                return mixed_template_list<Templates..., Others...>{};
             }(deducible_of<Other>());
         }
 
         template<typename T>
         inline static constexpr auto remove() noexcept {
-            constexpr std::optional<std::size_t> index_of = indexOf<T>();
+            constexpr std::optional<std::size_t> index = index_of<T>();
 
-            if constexpr (!index_of) return MixedTemplateList<Templates...>{};
+            if constexpr (!index) return mixed_template_list<Templates...>{};
             else return []<std::size_t Skip, std::size_t... I>(constant_wrapper<Skip>, std::index_sequence<I...>) {
-                return MixedTemplateList<at<(I < Skip ? I : I + 1)>()...>{};
-            }(cw<*index_of>, std::make_index_sequence<sizeof...(Templates) - 1>{});
+                return mixed_template_list<at<(I < Skip ? I : I + 1)>()...>{};
+            }(cw<*index>, std::make_index_sequence<sizeof...(Templates) - 1>{});
         }
 
         template<auto Value>
         inline static constexpr auto remove() noexcept {
-            constexpr std::optional<std::size_t> index_of = indexOf<Value>();
+            constexpr std::optional<std::size_t> index = index_of<Value>();
 
-            if constexpr (!index_of) return MixedTemplateList<Templates...>{};
+            if constexpr (!index) return mixed_template_list<Templates...>{};
             else return[]<std::size_t Skip, std::size_t... I>(constant_wrapper<Skip>, std::index_sequence<I...>) {
-                return MixedTemplateList<at<(I < Skip ? I : I + 1)>()...>{};
-            }(cw<*index_of>, std::make_index_sequence<sizeof...(Templates) - 1>{});
+                return mixed_template_list<at<(I < Skip ? I : I + 1)>()...>{};
+            }(cw<*index>, std::make_index_sequence<sizeof...(Templates) - 1>{});
         }
 
         inline static constexpr std::size_t size() noexcept {
@@ -462,23 +466,23 @@ namespace Foundry {
     };
 
     template<auto... Templates>
-        requires((Meta::instance_of<decltype(Templates), Meta::toUnderlyingType<MixedTemplate>()>() && ...))
-    class MixedTemplateListBuilder {
+        requires((meta::instance_of<decltype(Templates), meta::to_underlying_type<mixed_template>()>() && ...))
+    class mixed_template_list_builder {
     public:
         template<typename... New>
             requires(sizeof...(New) > 0)
         inline static constexpr auto add() noexcept {
-            return MixedTemplateListBuilder<Templates..., makeMixedTemplate<New>()...>{};
+            return mixed_template_list_builder<Templates..., make_mixed_template<New>()...>{};
         }
 
         template<auto... New>
             requires(sizeof...(New) > 0)
         inline static constexpr auto add() noexcept {
-            return MixedTemplateListBuilder<Templates..., makeMixedTemplate<New>()...>{};
+            return mixed_template_list_builder<Templates..., make_mixed_template<New>()...>{};
         }
 
         inline static constexpr auto build() noexcept {
-            return MixedTemplateList<Templates...>{};
+            return mixed_template_list<Templates...>{};
         }
     };
 }

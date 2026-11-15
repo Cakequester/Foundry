@@ -20,7 +20,7 @@
 
 #include <stdexcept>
 
-namespace Foundry {
+namespace foundry {
     template<typename T, typename... Rest>
     struct variadic_front {
         using type = T;
@@ -85,15 +85,15 @@ namespace Foundry {
     inline constexpr constant_wrapper<Value> cw{};
 
     template<bool Condition, typename T>
-    class OptionalField {
+    class optional_field {
     public:
         inline static constexpr bool IsEmpty = !Condition;
 
         T value;
 
-        inline constexpr OptionalField(T value) noexcept : value(std::move(value)) {}
+        inline constexpr optional_field(T value) noexcept : value(std::move(value)) {}
 
-        inline constexpr OptionalField& operator=(T value) noexcept {
+        inline constexpr optional_field& operator=(T value) noexcept {
             this->value = value;
             return *this;
         }
@@ -108,18 +108,18 @@ namespace Foundry {
     };
 
     template<typename T>
-    class OptionalField<false, T> {
+    class optional_field<false, T> {
     public:
         inline static constexpr bool IsEmpty = true;
 
-        inline constexpr OptionalField(auto&&...) noexcept {}
+        constexpr optional_field(auto&&...) noexcept {}
     };
 
-    class EmptyCompileOptional {};
-    inline constexpr auto null_optional = EmptyCompileOptional{};
+    class empty_compile_optional {};
+    inline constexpr auto null_optional = empty_compile_optional{};
 
     template<typename T>
-    class CompileOptional {
+    class compile_optional {
     public:
         static_assert(!std::same_as<std::remove_cv_t<T>, std::nullopt_t> && !std::same_as<std::remove_cv_t<T>, std::in_place_t>,
             "T in CompileOptional<T> must not be nullopt_t or in_place_t");
@@ -127,38 +127,38 @@ namespace Foundry {
         const std::array<T, 1> _storage;
         const bool _has_value = false;
 
-        inline constexpr CompileOptional() noexcept(std::is_nothrow_default_constructible_v<T>) requires(std::is_default_constructible_v<T>) : _storage{ T() }, _has_value(true) {}
-        inline constexpr CompileOptional(const CompileOptional&) noexcept = default;
-        inline constexpr CompileOptional(CompileOptional&) noexcept = default;
+        constexpr compile_optional() noexcept(std::is_nothrow_default_constructible_v<T>) requires(std::is_default_constructible_v<T>) : _storage{ T() }, _has_value(true) {}
+        constexpr compile_optional(const compile_optional&) noexcept = default;
+        constexpr compile_optional(compile_optional&) noexcept = default;
 
-        inline constexpr CompileOptional(EmptyCompileOptional) : _storage{}, _has_value(false) {}
+        constexpr compile_optional(empty_compile_optional) : _storage{}, _has_value(false) {}
 
         template<typename U>
-        inline constexpr CompileOptional(U&& value) : _storage{ std::forward<U>(value) }, _has_value(true) {}
+        constexpr compile_optional(U&& value) : _storage{ std::forward<U>(value) }, _has_value(true) {}
 
-        inline constexpr T& value() const {
+        constexpr T& value() const {
             if (!_has_value) throw std::bad_optional_access();
             return _storage.front();
         }
 
-        inline constexpr bool has_value() const noexcept {
+        constexpr bool has_value() const noexcept {
             return _has_value;
         }
     };
 
     template<typename T>
-    class CompileOptional<T&> {
+    class compile_optional<T&> {
     public:
         T* const _storage = nullptr;
 
-        constexpr CompileOptional() noexcept : _storage(nullptr) {}
-        constexpr CompileOptional(const CompileOptional&) noexcept = default;
-        constexpr CompileOptional(CompileOptional&&) noexcept = default;
+        constexpr compile_optional() noexcept : _storage(nullptr) {}
+        constexpr compile_optional(const compile_optional&) noexcept = default;
+        constexpr compile_optional(compile_optional&&) noexcept = default;
 
-        constexpr CompileOptional(EmptyCompileOptional) noexcept : _storage(nullptr) {}
+        constexpr compile_optional(empty_compile_optional) noexcept : _storage(nullptr) {}
 
-        constexpr CompileOptional(T& value) noexcept : _storage(std::addressof(value)) {}
-        constexpr CompileOptional(const T& value) noexcept : _storage(std::addressof(value)) {}
+        constexpr compile_optional(T& value) noexcept : _storage(std::addressof(value)) {}
+        constexpr compile_optional(const T& value) noexcept : _storage(std::addressof(value)) {}
 
         constexpr T& value() const {
             if (!_storage) throw std::bad_optional_access();

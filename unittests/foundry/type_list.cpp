@@ -4,7 +4,7 @@
 
 namespace list {
 	using marker_t = long double;
-	using list = Foundry::TypeList<int, float, int, int, marker_t>;
+	using list = foundry::type_list<int, float, int, int, marker_t>;
 
 	constexpr int size = 5;
 }
@@ -18,7 +18,7 @@ TEST(TypeList, Contains) {
 }
 
 TEST(TypeList, IndexOf) {
-	EXPECT_EQ(list::list::indexOf<list::marker_t>(), list::list::size() - 1);
+	EXPECT_EQ(list::list::index_of<list::marker_t>(), list::list::size() - 1);
 }
 
 TEST(TypeList, Reverse) {
@@ -32,7 +32,7 @@ TEST(TypeList, Sublist) {
 }
 
 TEST(TypeList, PushFront) {
-	using pushed = decltype(list::list::pushFront<list::marker_t>());
+	using pushed = decltype(list::list::push_front<list::marker_t>());
 	EXPECT_TRUE((std::same_as<decltype(pushed::front())::type, list::marker_t>));
 }
 
@@ -42,8 +42,7 @@ TEST(TypeList, Append) {
 }
 
 TEST(TypeList, AppendOther) {
-	using inner_list = Foundry::TypeList<list::marker_t, list::marker_t>;
-	using appended = decltype(list::list::appendList<inner_list>());
+	using appended = decltype(list::list::append_list<foundry::type_list<list::marker_t, list::marker_t>>());
 	EXPECT_TRUE((std::same_as<decltype(appended::back())::type, list::marker_t>));
 }
 

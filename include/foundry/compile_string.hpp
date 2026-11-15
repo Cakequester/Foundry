@@ -14,27 +14,27 @@
 
 #include <foundry/meta/type_info.hpp>
 
-namespace Foundry {
+namespace foundry {
     template<character CharT, std::size_t N>
-    class CompileGenericString {
+    class compile_generic_string {
     public:
         std::array<CharT, N> _chars{};
 
-        inline constexpr CompileGenericString() noexcept {}
+        inline constexpr compile_generic_string() noexcept {}
 
-        inline constexpr CompileGenericString(const CharT(&str)[N]) noexcept {
+        inline constexpr compile_generic_string(const CharT(&str)[N]) noexcept {
             for (std::size_t i = 0; i < N; ++i) _chars[i] = str[i];
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
         inline constexpr bool operator==(const Other& rhs) const noexcept {
             if constexpr (size() != Other::size()) return false;
             else return std::equal(_chars.begin(), _chars.end(), rhs._chars.begin());
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
         inline constexpr std::strong_ordering operator<=>(const Other& rhs) const noexcept {
             if constexpr (size() != Other::size()) return false;
             else return std::lexicographical_compare_three_way(
@@ -61,29 +61,29 @@ namespace Foundry {
             return _chars[pos];
         }
 
-        inline constexpr bool startsWith(CharT character) const noexcept {
+        inline constexpr bool starts_with(CharT character) const noexcept {
             if constexpr (size() <= 0) return false;
             else
                 return _chars[0] == character;
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
-        inline constexpr bool startsWith(const Other& other) const noexcept {
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
+        inline constexpr bool starts_with(const Other& other) const noexcept {
             if constexpr (size() < Other::size()) return false;
             else
                 return std::equal(_chars.begin(), _chars.begin() + Other::size(), other._chars.begin());
         }
 
-        inline constexpr bool endsWith(CharT character) const noexcept {
+        inline constexpr bool ends_with(CharT character) const noexcept {
             if constexpr (size() <= 0) return false;
             else
                 return _chars[size()] == character;
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
-        inline constexpr bool endsWith(const Other& other) const noexcept {
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
+        inline constexpr bool ends_with(const Other& other) const noexcept {
             if constexpr (size() < Other::size()) return false;
             else
                 return std::equal(_chars.begin() + (size() - Other::size()), _chars.end(), other._chars.begin());
@@ -92,7 +92,7 @@ namespace Foundry {
         inline constexpr auto insert(std::size_t index, CharT character) const {
             if (index > _chars.size()) throw std::out_of_range();
 
-            CompileGenericString<CharT, N + 1> result;
+            compile_generic_string<CharT, N + 1> result;
 
             std::copy_n(_chars.begin(), index, result.begin());
             *(result.begin() + index) = character;
@@ -102,11 +102,11 @@ namespace Foundry {
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
         inline constexpr auto insert(std::size_t index, const Other& other) const {
             if (index > _chars.size()) throw std::out_of_range();
 
-            CompileGenericString<CharT, N + Other::size()> result;
+            compile_generic_string<CharT, N + Other::size()> result;
 
             std::copy_n(_chars.begin(), index, result.begin());
             std::copy_n(other.begin(), Other::size(), result.begin() + index);
@@ -115,13 +115,13 @@ namespace Foundry {
             return result;
         }
 
-        inline constexpr auto pushBack(CharT character) const {
+        inline constexpr auto push_back(CharT character) const {
             return insert(size(), character);
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
-        inline constexpr auto pushBack(const Other& other) const {
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
+        inline constexpr auto push_back(const Other& other) const {
             return insert(size(), other);
         }
 
@@ -130,7 +130,7 @@ namespace Foundry {
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
         inline constexpr auto append(const Other& other) const {
             return insert(size(), other);
         }
@@ -140,7 +140,7 @@ namespace Foundry {
         }
 
         template<typename Other>
-            requires(Meta::instance_of<Other, CompileGenericString, CharT>())
+            requires(meta::instance_of<Other, meta::to_underlying_type<foundry::compile_generic_string>(), CharT>())
         inline constexpr auto operator+(const Other& rhs) const {
             return insert(size(), rhs);
         }
@@ -207,10 +207,10 @@ namespace Foundry {
     };
 
     template<std::size_t N>
-    using CompileString = CompileGenericString<char, N>;
+    using compile_string = compile_generic_string<char, N>;
 
     template<std::size_t N>
-    using CompileWideString = CompileGenericString<wchar_t, N>;
+    using compile_wide_string = compile_generic_string<wchar_t, N>;
 }
 
 #endif

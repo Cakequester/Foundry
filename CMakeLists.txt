@@ -2,17 +2,17 @@
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-project(Foundry)
+project(foundry)
 
 set(PROJECT_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_library(Foundry INTERFACE)
+add_library(foundry INTERFACE)
 
-target_include_directories(Foundry INTERFACE
+target_include_directories(foundry INTERFACE
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_compile_features(Foundry INTERFACE
+target_compile_features(foundry INTERFACE
     c_std_99
     cxx_std_23
 )

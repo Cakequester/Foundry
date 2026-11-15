@@ -12,7 +12,7 @@
 
 #include <foundry/integral.hpp>
 
-namespace Foundry {
+namespace foundry {
     inline constexpr std::uint64_t hash_combine(std::uint64_t x, std::uint64_t y) noexcept {
         return x ^ (y + 0x9e3779b97f4a7c15ULL + (x << 6) + (x >> 2));
     }
@@ -30,7 +30,7 @@ namespace Foundry {
         return (x << r) | (x >> (64 - r));
     }
 
-    class FNV1A {
+    class fnv1a {
     private:
         inline static constexpr std::uint64_t fnv_basis = 0xcbf29ce484222325ULL;
         inline static constexpr std::uint64_t fnv_prime = 0x100000001b3ULL;
@@ -65,7 +65,7 @@ namespace Foundry {
         }
     };
 
-    class Murmur128 {
+    class murmur128 {
     private:
         inline static constexpr std::uint64_t c1 = 0x87c37b91114253d5ULL;
         inline static constexpr std::uint64_t c2 = 0x4cf5ad432745937fULL;

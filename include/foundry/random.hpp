@@ -13,13 +13,13 @@
 #include <foundry/integral.hpp>
 #include <foundry/compile_time.hpp>
 
-namespace Foundry {
-    class LCGUser {
+namespace foundry {
+    class lcg_user {
     private:
         inline static constexpr std::uint64_t Multiplier = 6364136223846793005u;
         inline static constexpr std::uint64_t Increment = 1442695040888963407u;
     protected:
-        inline static constexpr std::size_t randomizePermutationsFromProvidedLocation(const std::source_location& location) noexcept {
+        inline static constexpr std::size_t randomize_permutations_from_provided_location(const std::source_location& location) noexcept {
             const std::uint32_t line = location.line();
             const std::uint32_t column = location.column();
 
@@ -43,11 +43,11 @@ namespace Foundry {
     };
 
     template<std::uint64_t Seed>
-    class UnseededCompileRandom : public LCGUser {
+    class unseeded_compile_random : public lcg_user {
     private:
     public:
         inline static constexpr std::uint64_t get(const std::source_location& location = std::source_location::current()) noexcept {
-            return LCGUser::permutate(Seed, randomizePermutationsFromProvidedLocation(location));
+            return lcg_user::permutate(Seed, randomize_permutations_from_provided_location(location));
         }
 
         inline static constexpr std::uint64_t get_in_range(std::uint64_t min, std::uint64_t max, const std::source_location& location = std::source_location::current()) noexcept {
@@ -55,32 +55,11 @@ namespace Foundry {
         }
     };
 
-    inline static constexpr std::uint64_t generateRandomFromTranslationUnit() noexcept {
-        constexpr char date[] = __DATE__;
-        constexpr char time[] = __TIME__;
-
-        std::uint64_t hash = 0xcbf29ce484222325ULL;
-
-        for (size_t i = 0; i < sizeof(date) - 1; ++i) {
-            hash ^= static_cast<unsigned char>(date[i]);
-            hash *= 0x100000001b3ULL;
-        }
-
-        for (size_t i = 0; i < sizeof(time) - 1; ++i) {
-            hash ^= static_cast<unsigned char>(time[i]);
-            hash *= 0x100000001b3ULL;
-        }
-
-        hash = FNV1A::hash(__FILE__, hash);
-
-        return hash;
-    }
-
     // Produces a value based on the type that is passed in.
     template<typename T>
-    class TypeIdentifierRandom {
+    class type_identifier_random {
     private:
-        inline static constexpr uint128_t Hash = Meta::typeId<T>().asInt();
+        inline static constexpr uint128_t Hash = meta::type_id<T>().as_int();
     public:
         inline static constexpr uint128_t get() noexcept {
             return Hash;
@@ -89,10 +68,10 @@ namespace Foundry {
 
     // Uses type and source location for extra entropy
     template<typename T>
-    class MixedTypeIdentifierRandom : public LCGUser {
+    class mixed_type_identifier_random : public lcg_user {
     public:
         inline static constexpr std::uint64_t get(const std::source_location& location = std::source_location::current()) noexcept {
-            return LCGUser::permutate(TypeIdentifierRandom<T>::get(), LCGUser::randomizePermutationsFromProvidedLocation(location));
+            return lcg_user::permutate(type_identifier_random<T>::get(), randomize_permutations_from_provided_location(location));
         }
 
         inline static constexpr std::uint64_t get_in_range(std::uint64_t min, std::uint64_t max, const std::source_location& location = std::source_location::current()) noexcept {

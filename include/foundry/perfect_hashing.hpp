@@ -21,7 +21,7 @@
 #include <foundry/hashing.hpp>
 #include <foundry/random.hpp>
 
-namespace Foundry {
+namespace foundry {
     namespace detail {
         template<typename Storable, std::size_t TableSize>
         class perfect_hasher_storage {
@@ -62,7 +62,7 @@ namespace Foundry {
         class pair_extractor : public key_extractor {
         public:
             template<typename P>
-                requires(Meta::instance_of<P, Meta::toUnderlyingType<std::pair>()>())
+                requires(meta::instance_of<P, meta::to_underlying_type<std::pair>()>())
             static constexpr auto get(const P& p) noexcept { return p.first; }
         };
 
@@ -74,12 +74,12 @@ namespace Foundry {
 
         template<typename Key, typename Storable, typename KeyExtractor, std::size_t TableSize>
             requires(std::derived_from<KeyExtractor, key_extractor>)
-        class perfect_hasher : public perfect_hasher_structurer<Storable, TableSize, Meta::is_structural<Storable>> {
+        class perfect_hasher : public perfect_hasher_structurer<Storable, TableSize, meta::is_structural<Storable>> {
         private:
-            inline static constexpr std::uint64_t TopLevelSeed = MixedTypeIdentifierRandom<perfect_hasher>::get() ^ mix_bits(TableSize);
-            inline static constexpr std::uint64_t SecondarySeed = MixedTypeIdentifierRandom<perfect_hasher>::get() ^ mix_bits(TableSize ^ MixedTypeIdentifierRandom<perfect_hasher>::get());
+            inline static constexpr std::uint64_t TopLevelSeed = mixed_type_identifier_random<perfect_hasher>::get() ^ mix_bits(TableSize);
+            inline static constexpr std::uint64_t SecondarySeed = mixed_type_identifier_random<perfect_hasher>::get() ^ mix_bits(TableSize ^ mixed_type_identifier_random<perfect_hasher>::get());
 
-            using super = perfect_hasher_structurer<Storable, TableSize, Meta::is_structural<Storable>>;
+            using super = perfect_hasher_structurer<Storable, TableSize, meta::is_structural<Storable>>;
 
             inline static constexpr std::size_t MaximumItemsForConsteval = 150;
 
@@ -118,7 +118,7 @@ namespace Foundry {
                 std::array<Bucket, storage_type::BucketCount> buckets = {};
 
                 for (std::size_t i = 0; i < entries.size(); ++i) {
-                    const std::size_t bucket = FNV1A::hash(KeyExtractor::get(entries[i]), TopLevelSeed) % storage_type::BucketCount;
+                    const std::size_t bucket = fnv1a::hash(KeyExtractor::get(entries[i]), TopLevelSeed) % storage_type::BucketCount;
 
                     buckets[bucket].members[buckets[bucket].count++] = i;
                 }
@@ -147,7 +147,7 @@ namespace Foundry {
 
                             const auto& entry = entries[entry_index];
 
-                            const std::size_t slot = FNV1A::hash(KeyExtractor::get(entry), SecondarySeed ^ displacement) % TableSize;
+                            const std::size_t slot = fnv1a::hash(KeyExtractor::get(entry), SecondarySeed ^ displacement) % TableSize;
 
                             if (occupied[slot]) {
                                 valid = false;
@@ -191,11 +191,11 @@ namespace Foundry {
             constexpr perfect_hasher(std::array<Storable, TableSize> entries) : perfect_hasher(std::move(initialize_storage(entries))) {}
 
             constexpr std::optional<Storable> get_data(Key key) const noexcept {
-                const std::size_t bucket = FNV1A::hash(key, TopLevelSeed) % super::storage::BucketCount;
+                const std::size_t bucket = fnv1a::hash(key, TopLevelSeed) % super::storage::BucketCount;
 
                 const std::size_t displacement = this->_storage._displacements[bucket];
 
-                const std::size_t slot = FNV1A::hash(key, SecondarySeed ^ displacement) % TableSize;
+                const std::size_t slot = fnv1a::hash(key, SecondarySeed ^ displacement) % TableSize;
 
                 const std::size_t entry_index = this->_storage._table[slot];
 

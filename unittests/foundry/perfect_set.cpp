@@ -7,7 +7,7 @@ namespace set {
 
 	constexpr int size = 3;
 
-	constexpr auto set = Foundry::make_perfect_set<int>(314, testing_key, 56723);
+	constexpr auto set = foundry::make_perfect_set<int>(314, testing_key, 56723);
 }
 
 TEST(CompileSet, Contains) {
